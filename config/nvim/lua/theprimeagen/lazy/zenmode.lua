@@ -3,7 +3,6 @@ return {
   config = function()
     require("zen-mode").setup {
       window = {
-        backdrop = 0.5,
         options = {},
       },
 
@@ -13,6 +12,9 @@ return {
 
       on_open = function()
         vim.diagnostic.enable(false)
+
+        -- Note: Hard coded for nightfly colorscheme
+        vim.api.nvim_set_hl(0, "ZenBg", { bg = "#051321", blend = 90 })
       end,
 
       on_close = function()
