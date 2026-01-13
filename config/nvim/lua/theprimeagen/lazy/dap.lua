@@ -49,8 +49,6 @@ return {
             end, { desc = "Debug: Set Conditional Breakpoint" })
         end
     },
-
-
     {
         "rcarriga/nvim-dap-ui",
         dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
@@ -140,7 +138,6 @@ return {
             end
         end,
     },
-
     {
         "jay-babu/mason-nvim-dap.nvim",
         dependencies = {

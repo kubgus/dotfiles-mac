@@ -23,12 +23,6 @@ function R(name)
     require("plenary.reload").reload_module(name)
 end
 
-vim.filetype.add({
-    extension = {
-        templ = 'templ',
-    }
-})
-
 autocmd('TextYankPost', {
     group = yank_group,
     pattern = '*',
@@ -40,7 +34,7 @@ autocmd('TextYankPost', {
     end,
 })
 
-autocmd({"BufWritePre"}, {
+autocmd('BufWritePre', {
     group = ThePrimeagenGroup,
     pattern = "*",
     command = [[%s/\s\+$//e]],
@@ -49,15 +43,9 @@ autocmd({"BufWritePre"}, {
 autocmd('BufEnter', {
     group = ThePrimeagenGroup,
     callback = function()
-        --if vim.bo.filetype == "zig" then
-        --    vim.cmd.colorscheme("tokyonight-night")
-        --else
-        --    vim.cmd.colorscheme("rose-pine-moon")
-        --end
         vim.cmd.colorscheme("nightfly")
     end
 })
-
 
 autocmd('LspAttach', {
     group = ThePrimeagenGroup,
