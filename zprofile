@@ -1,6 +1,12 @@
+# Nvim as default editor
+export EDITOR="nvim"
+
 # Essential aliases
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
+
+# Edit zprofile
+alias editzprofile="$EDITOR ~/.zprofile && source ~/.zprofile"
 
 alias ll="ls -lh"
 alias la="ls -lha"
@@ -16,7 +22,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 # Bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
-#
+
 # Git aliases
 alias gs="git status"
 alias ga="git add"
