@@ -42,6 +42,7 @@ alias gpu="git push -u"
 alias gpuo="git push -u origin"
 alias gpuc="git push -u origin HEAD" # git push upstream current (branch)
 alias gpd="git push origin --delete"
+alias gpF="git push --force" # caps for safety
 alias gu="git pull" # git pull
 alias gx="git stash"
 alias gxa="git stash apply"
@@ -56,3 +57,34 @@ alias gbm="git merge"
 alias gl="git log"
 alias glg="git log --oneline --graph --decorate" # git log graph
 alias gla="git log --all --oneline --graph --decorate" # git log all
+alias gt="git tag"
+
+# Sanity reminders
+isitlate() {
+  hour=$(date +%H)
+  if (( hour >= 22 || hour < 6 )); then
+    return 0
+  else
+    return 1
+  fi
+}
+
+sleepreminder() {
+  echo ""
+  echo "It's late. Go to sleep."
+  echo "-Your past self"
+  echo ""
+  sleep 5
+}
+
+if isitlate; then
+  sleepreminder
+fi
+
+go() {
+  if isitlate; then
+    sleepreminder
+    return 1
+  fi
+  command go "$@"
+}
