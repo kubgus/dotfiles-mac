@@ -88,3 +88,11 @@ go() {
   fi
   command go "$@"
 }
+
+nvim() {
+  if isitlate; then
+    sleepreminder
+    return 1
+  fi
+  command nvim "$@"
+}
