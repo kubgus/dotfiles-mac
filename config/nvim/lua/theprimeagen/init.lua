@@ -64,6 +64,14 @@ autocmd('LspAttach', {
     end
 })
 
+autocmd('VimEnter', {
+    group = ThePrimeagenGroup,
+    callback = function(e)
+        -- C# LSP needs this to find dotnet installed via homebrew
+        vim.env.DOTNET_ROOT = "/opt/homebrew/opt/dotnet/libexec"
+    end
+})
+
 vim.g.netrw_browse_split = 0
 vim.g.netrw_banner = 0
 vim.g.netrw_winsize = 25
