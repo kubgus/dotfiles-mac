@@ -1,5 +1,7 @@
 config/*
+!config/gtk-3.0
 !config/nvim
+!config/opencode
 
 # 😭
 .DS_Store
