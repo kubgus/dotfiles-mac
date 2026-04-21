@@ -44,6 +44,7 @@ alias gpuc="git push -u origin HEAD" # git push upstream current (branch)
 alias gpd="git push origin --delete"
 alias gpF="git push --force" # caps for safety
 alias gu="git pull" # git pull
+alias guc="git pull origin HEAD"
 alias gx="git stash"
 alias gxa="git stash apply"
 alias gbb="git branch"
@@ -54,6 +55,7 @@ alias gbcn="git checkout -b" # git checkout new (branch)
 alias gbs="git switch"
 alias gbsn="git switch -c" # git switch new (branch)
 alias gbm="git merge"
+alias gbuc="git branch --set-upstream-to=origin/main main"
 alias gl="git log"
 alias glg="git log --oneline --graph --decorate" # git log graph
 alias gla="git log --all --oneline --graph --decorate" # git log all
