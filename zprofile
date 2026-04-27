@@ -1,29 +1,49 @@
+# -----------------------
 # Nvim as default editor
+# -----------------------
 export EDITOR="nvim"
 
-# Essential aliases
+# -----------------------
+# Essential aliases (QoL)
+# -----------------------
 alias ls="ls --color=auto"
-alias grep="grep --color=auto"
-
-# Edit zprofile
-alias editzprofile="$EDITOR ~/.zprofile && source ~/.zprofile"
-
 alias ll="ls -lh"
 alias la="ls -lha"
 
 alias ..="cd .."
 
-# Local binaries
+alias grep="grep --color=auto"
+
+# -----------------------
+# Automatically apply zprofile changes
+# -----------------------
+alias editzprofile="$EDITOR ~/.zprofile && source ~/.zprofile"
+
+# -----------------------
+# Add user binaries to PATH
+# -----------------------
 export PATH="$HOME/Bin:$PATH"
 
+# -----------------------
 # Homebrew
+# -----------------------
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
+# -----------------------
 # Bun
+# -----------------------
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
+# -----------------------
+# Secure npm aliases
+# -----------------------
+alias npm="socket npm"
+alias npx="socket npx"
+
+# -----------------------
 # Git aliases
+# -----------------------
 alias gs="git status"
 alias ga="git add"
 alias gaa="git add ." # git add all
@@ -61,8 +81,11 @@ alias glg="git log --oneline --graph --decorate" # git log graph
 alias gla="git log --all --oneline --graph --decorate" # git log all
 alias gt="git tag"
 
+# -----------------------
 # Sanity reminders
-isitlate() {
+# -----------------------
+_is_it_late() {
+  local hour
   hour=$(date +%H)
   if (( hour >= 22 || hour < 6 )); then
     return 0
@@ -71,7 +94,7 @@ isitlate() {
   fi
 }
 
-sleepreminder() {
+_sleep_reminder() {
   echo ""
   echo "It's late. Go to sleep."
   echo "-Your past self"
@@ -79,22 +102,42 @@ sleepreminder() {
   sleep 5
 }
 
-if isitlate; then
-  sleepreminder
+_run_sanity_check() {
+  if _is_it_late; then
+    _sleep_reminder
+    return 1
+  fi
+  return 0
+}
+
+# Initial check on terminal startup
+if _is_it_late; then
+  _sleep_reminder
 fi
 
-go() {
-  if isitlate; then
-    sleepreminder
-    return 1
-  fi
-  command go "$@"
-}
+LATE_COMMANDS=(
+  "nvim"
+  "go"
+  "npm" "npx" "bun" "bunx"
+)
 
-nvim() {
-  if isitlate; then
-    sleepreminder
-    return 1
+# Wrap each command with alias
+for cmd in "${LATE_COMMANDS[@]}"; do
+  existing_val=""
+
+  # Safely extract the existing alias if one exists
+  if [[ -n "$ZSH_VERSION" ]]; then
+    existing_val="${aliases[$cmd]}"
+  elif [[ -n "$BASH_VERSION" ]]; then
+    existing_val=$(alias "$cmd" 2>/dev/null | sed "s/^alias $cmd='\(.*\)'$/\1/")
   fi
-  command nvim "$@"
-}
+
+  # Build the composite alias
+  if [[ -n "$existing_val" ]]; then
+    # Preserves your existing alias and prepends the check
+    alias "$cmd"="_run_sanity_check && $existing_val"
+  else
+    # Creates a fresh check
+    alias "$cmd"="_run_sanity_check && $cmd"
+  fi
+done
