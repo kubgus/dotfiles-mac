@@ -1,3 +1,4 @@
+-- Visualizes the undo history as a navigable tree
 return {
     "mbbill/undotree",
     keys = {

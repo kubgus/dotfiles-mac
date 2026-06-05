@@ -1,5 +1,8 @@
+-- Debug Adapter Protocol: debugging support, its UI, and adapter installation.
+-- Module-level autocmd group, shared by the dap-ui spec below.
 vim.api.nvim_create_augroup("DapGroup", { clear = true })
 
+-- Jump the cursor to the window already showing the given buffer
 local function navigate(args)
     local buffer = args.buf
 
@@ -32,25 +35,32 @@ local function create_nav_options(name)
 end
 
 return {
+    -- The debugger core: stepping, breakpoints, and run control
     {
         "mfussenegger/nvim-dap",
+        enabled = false,
         lazy = false,
+        keys = {
+            { "<F8>", function() require("dap").continue() end, desc = "Debug: Continue" },
+            { "<F10>", function() require("dap").step_over() end, desc = "Debug: Step Over" },
+            { "<F11>", function() require("dap").step_into() end, desc = "Debug: Step Into" },
+            { "<F12>", function() require("dap").step_out() end, desc = "Debug: Step Out" },
+            { "<leader>b", function() require("dap").toggle_breakpoint() end, desc = "Debug: Toggle Breakpoint" },
+            {
+                "<leader>B",
+                function() require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: ")) end,
+                desc = "Debug: Set Conditional Breakpoint",
+            },
+        },
         config = function()
-            local dap = require("dap")
-            dap.set_log_level("DEBUG")
-
-            vim.keymap.set("n", "<F8>", dap.continue, { desc = "Debug: Continue" })
-            vim.keymap.set("n", "<F10>", dap.step_over, { desc = "Debug: Step Over" })
-            vim.keymap.set("n", "<F11>", dap.step_into, { desc = "Debug: Step Into" })
-            vim.keymap.set("n", "<F12>", dap.step_out, { desc = "Debug: Step Out" })
-            vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { desc = "Debug: Toggle Breakpoint" })
-            vim.keymap.set("n", "<leader>B", function()
-                dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
-            end, { desc = "Debug: Set Conditional Breakpoint" })
+            require("dap").set_log_level("DEBUG")
         end
     },
+    -- The debugger UI: scopes, watches, repl, stacks, breakpoints panels.
+    -- Each panel gets its own single-element layout so it can be toggled solo.
     {
         "rcarriga/nvim-dap-ui",
+        enabled = false,
         dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
         config = function()
             local dap = require("dap")
@@ -124,6 +134,7 @@ return {
                 enter = true,
             })
 
+            -- Close the UI automatically when the debug session ends
             dap.listeners.before.event_terminated.dapui_config = function()
                 dapui.close()
             end
@@ -138,44 +149,46 @@ return {
             end
         end,
     },
+    -- Installs and wires up debug adapters via Mason
     {
         "jay-babu/mason-nvim-dap.nvim",
+        enabled = false,
         dependencies = {
             "williamboman/mason.nvim",
             "mfussenegger/nvim-dap",
             "neovim/nvim-lspconfig",
         },
-        config = function()
-            require("mason-nvim-dap").setup({
-                ensure_installed = {
-                    "delve",
-                },
-                automatic_installation = true,
-                handlers = {
-                    function(config)
-                        require("mason-nvim-dap").default_setup(config)
-                    end,
-                    delve = function(config)
-                        table.insert(config.configurations, 1, {
-                            args = function() return vim.split(vim.fn.input("args> "), " ") end,
-                            type = "delve",
-                            name = "file",
-                            request = "launch",
-                            program = "${file}",
-                            outputMode = "remote",
-                        })
-                        table.insert(config.configurations, 1, {
-                            args = function() return vim.split(vim.fn.input("args> "), " ") end,
-                            type = "delve",
-                            name = "file args",
-                            request = "launch",
-                            program = "${file}",
-                            outputMode = "remote",
-                        })
-                        require("mason-nvim-dap").default_setup(config)
-                    end,
-                },
-            })
-        end,
+        opts = {
+            ensure_installed = {
+                "delve", -- Go debugger
+            },
+            automatic_installation = true,
+            handlers = {
+                -- Default handler: set up each adapter with Mason's defaults
+                function(config)
+                    require("mason-nvim-dap").default_setup(config)
+                end,
+                -- Go: prepend launch configs that prompt for program args
+                delve = function(config)
+                    table.insert(config.configurations, 1, {
+                        args = function() return vim.split(vim.fn.input("args> "), " ") end,
+                        type = "delve",
+                        name = "file",
+                        request = "launch",
+                        program = "${file}",
+                        outputMode = "remote",
+                    })
+                    table.insert(config.configurations, 1, {
+                        args = function() return vim.split(vim.fn.input("args> "), " ") end,
+                        type = "delve",
+                        name = "file args",
+                        request = "launch",
+                        program = "${file}",
+                        outputMode = "remote",
+                    })
+                    require("mason-nvim-dap").default_setup(config)
+                end,
+            },
+        },
     },
 }

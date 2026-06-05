@@ -1,14 +1,17 @@
+-- Git wrapper: run git commands and view status from inside Neovim
 return {
     "tpope/vim-fugitive",
+    keys = {
+        { "<leader>gs", vim.cmd.Git, desc = "Fugitive: Git status" },
+    },
     config = function()
-        vim.keymap.set("n", "<leader>gs", vim.cmd.Git)
-
-        local ThePrimeagen_Fugitive = vim.api.nvim_create_augroup("ThePrimeagen_Fugitive", {})
+        local Kubgus_Fugitive = vim.api.nvim_create_augroup("Kubgus_Fugitive", {})
 
         local autocmd = vim.api.nvim_create_autocmd
 
+        -- Add push/pull mappings only inside the fugitive status buffer
         autocmd("BufWinEnter", {
-            group = ThePrimeagen_Fugitive,
+            group = Kubgus_Fugitive,
             pattern = "*",
             callback = function()
                 if vim.bo.ft ~= "fugitive" then
@@ -18,11 +21,11 @@ return {
                 local bufnr = vim.api.nvim_get_current_buf()
                 local opts = {buffer = bufnr, remap = false}
                 vim.keymap.set("n", "<leader>p", function()
-                    vim.cmd.Git('push')
+                    vim.cmd.Git("push")
                 end, opts)
 
                 vim.keymap.set("n", "<leader>P", function()
-                    vim.cmd.Git('pull')
+                    vim.cmd.Git("pull")
                 end, opts)
 
                 -- NOTE: It allows me to easily set the branch i am pushing and any tracking

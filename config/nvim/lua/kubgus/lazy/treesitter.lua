@@ -1,8 +1,9 @@
+-- Treesitter: syntax-aware highlighting, indentation, and the sticky context
 return {
     {
         "nvim-treesitter/nvim-treesitter",
-        build = ":TSUpdate",
-        main = "nvim-treesitter.config",
+        build = ":TSUpdate", -- recompile parsers on update
+        main = "nvim-treesitter.config", -- setup lives in this submodule
         lazy = false,
         opts = {
             ensure_installed = {
@@ -17,9 +18,9 @@ return {
             },
             highlight = {
                 enable = true,
+                -- Turn highlighting off for html and for very large files
                 disable = function(lang, buf)
                     if lang == "html" then
-                        print("disabled")
                         return true
                     end
 
@@ -35,27 +36,28 @@ return {
                     end
                 end,
 
+                -- Run Vim's regex highlighting alongside treesitter for markdown
                 additional_vim_regex_highlighting = { "markdown" },
             },
         }
     },
+    -- Pins the enclosing scope (function/class) to the top of the window
     {
         "nvim-treesitter/nvim-treesitter-context",
         dependencies = { "nvim-treesitter/nvim-treesitter" },
-        config = function()
-            require('treesitter-context').setup{
-                enable = true,
-                multiwindow = false,
-                max_lines = 2,
-                min_window_height = 0,
-                line_numbers = true,
-                multiline_threshold = 1,
-                trim_scope = 'outer',
-                mode = 'cursor',
-                separator = nil,
-                zindex = 20,
-                on_attach = nil,
-            }
-        end
+        main = "treesitter-context",
+        opts = {
+            enable = true,
+            multiwindow = false, -- only show context in the current window
+            max_lines = 2,       -- cap the context to 2 lines
+            min_window_height = 0,
+            line_numbers = true,
+            multiline_threshold = 1,
+            trim_scope = "outer", -- drop outer scopes first when over max_lines
+            mode = "cursor",
+            separator = nil,
+            zindex = 20,
+            on_attach = nil,
+        }
     }
 }
