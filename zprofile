@@ -27,7 +27,7 @@ export PATH="$HOME/Bin:$PATH"
 # -----------------------
 # Homebrew
 # -----------------------
-eval "$(/opt/homebrew/bin/brew shellenv)"
+eval "$(/opt/homebrew/bin/brew shellenv zsh)"
 
 # -----------------------
 # Bun
@@ -36,10 +36,34 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # -----------------------
-# Secure npm aliases
+# Dotnet
+# -----------------------
+export DOTNET_ROOT="/opt/homebrew/opt/dotnet/libexec"
+
+# -----------------------
+# Go
+# -----------------------
+export GOPATH=$HOME/.go
+export PATH=$PATH:$GOPATH/bin
+
+# -----------------------
+# Ffmpeg full
+# -----------------------
+export LDFLAGS="-L/opt/homebrew/opt/ffmpeg-full/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/ffmpeg-full/include"
+
+# -----------------------
+# Secure node aliases
 # -----------------------
 alias npm="socket npm"
 alias npx="socket npx"
+alias pnpm="socket pnpm"
+alias yarn="socket yarn"
+
+# -----------------------
+# Claude code as chat
+# -----------------------
+alias claudechat="cd $HOME/Documents/Claude/ && claude"
 
 # -----------------------
 # Git aliases
@@ -85,6 +109,7 @@ alias gt="git tag"
 # Sanity reminders
 # -----------------------
 _is_it_late() {
+  return 1
   local hour
   hour=$(date +%H)
   if (( hour >= 22 || hour < 6 )); then
