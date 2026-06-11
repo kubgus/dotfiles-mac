@@ -9,8 +9,8 @@
         "baseURL": "http://localhost:11434/v1"
       },
       "models": {
-        "gpt-oss:20b": {
-          "name": "gpt-oss:20b"
+        "gemma-26b-q4_0": {
+          "name": "gemma-26b-q4_0"
         }
       }
     }
