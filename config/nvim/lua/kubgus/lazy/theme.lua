@@ -9,13 +9,8 @@ return {
             vim.g.nightflyVirtualTextColor = true
         end,
         config = function()
-            -- Re-assert nightfly on every buffer enter so nothing overrides it
-            vim.api.nvim_create_autocmd("BufEnter", {
-                group = vim.api.nvim_create_augroup("Nightfly", {}),
-                callback = function()
-                    vim.cmd.colorscheme("nightfly")
-                end,
-            })
+            -- Apply the colorscheme once at startup; it persists across buffer switches
+            vim.cmd.colorscheme("nightfly")
         end,
     },
 }

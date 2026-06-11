@@ -2,6 +2,7 @@
 return {
     "zbirenbaum/copilot.lua",
     cmd = "Copilot",
+    branch = "master",
     event = "InsertEnter", -- only needed once you start typing
     opts = {
         suggestion = {
@@ -17,6 +18,10 @@ return {
                 prev = false,
                 dismiss = "<C-c>",
             },
+        },
+        filetypes = {
+            ["*"] = true, -- enable for all filetypes
+            -- markdown = false, -- disable for markdown files
         },
     },
 }
