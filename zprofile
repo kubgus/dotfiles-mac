@@ -92,6 +92,7 @@ alias guc="git pull origin HEAD"
 alias gx="git stash"
 alias gxa="git stash apply"
 alias gbb="git branch"
+alias gba="git branch --all"
 alias gbd="git branch -d"
 alias gbD="git branch -D" # caps for safety
 alias gbc="git checkout"
