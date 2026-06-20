@@ -1,6 +1,7 @@
 ### kubgus's neovim config
 Prerequisite:
-- [ripgrep](https://github.com/BurntSushi/ripgrep).
+- [ripgrep](https://github.com/BurntSushi/ripgrep)
+- pandoc
 - treesitter-cli
 
 ## Credits

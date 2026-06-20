@@ -29,6 +29,53 @@ vim.keymap.set("n", "<leader>Y", [["+Y]])
 -- Delete into the black hole register (don't overwrite the yank register)
 vim.keymap.set({"n", "v"}, "<leader>d", "\"_d")
 
+-- Copy markdown as rich text (cross-platform: macOS + Linux)
+local function copy_as_rich_text(markdown)
+  local html = vim.fn.system("pandoc -f markdown -t html", markdown)
+  if vim.v.shell_error ~= 0 then
+    vim.notify("pandoc failed: " .. html, vim.log.levels.ERROR)
+    return
+  end
+
+  local sysname = vim.loop.os_uname().sysname
+
+  if sysname == "Darwin" then
+    local hex = vim.fn.system("hexdump -ve '1/1 \"%.2x\"'", html)
+    local script = string.format(
+      'set the clipboard to {text:" ", «class HTML»:«data HTML%s»}',
+      hex
+    )
+    vim.fn.system({ "osascript", "-" }, script)
+  elseif sysname == "Linux" then
+    if vim.env.WAYLAND_DISPLAY then
+      vim.fn.system({ "wl-copy", "--type", "text/html" }, html)
+    else
+      vim.fn.system({ "xclip", "-selection", "clipboard", "-t", "text/html" }, html)
+    end
+  else
+    vim.notify("Unsupported platform: " .. sysname, vim.log.levels.ERROR)
+    return
+  end
+
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Clipboard copy failed", vim.log.levels.ERROR)
+  else
+    vim.notify("Copied as rich text")
+  end
+end
+
+-- Normal mode: whole buffer (works even if unsaved)
+vim.keymap.set("n", "<leader>mc", function()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  copy_as_rich_text(table.concat(lines, "\n"))
+end, { desc = "Copy buffer as rich text" })
+
+-- Visual mode: selection
+vim.keymap.set("v", "<leader>mc", function()
+  vim.cmd('normal! "ry')
+  copy_as_rich_text(vim.fn.getreg("r"))
+end, { desc = "Copy selection as rich text" })
+
 -- This is going to get me cancelled
 --vim.keymap.set("i", "<C-c>", "<Esc>")
 
