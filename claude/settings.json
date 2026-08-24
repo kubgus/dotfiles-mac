@@ -1,0 +1,21 @@
+{
+  "model": "haiku",
+  "theme": "auto",
+  "voiceEnabled": true,
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "skipWorkflowUsageWarning": true,
+  "hooks": {
+    "PermissionRequest": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Bash|Edit|Write", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
+    ]
+  }
+}

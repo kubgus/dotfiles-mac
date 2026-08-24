@@ -1,0 +1,38 @@
+{
+  "providers": {
+    "lm-studio": {
+      "baseUrl": "http://localhost:7798/v1",
+      "api": "openai-completions",
+      "apiKey": "local",
+      "models": [
+        {
+          "id": "google/gemma-4-26b-a4b-qat",
+          "name": "Gemma 4 26B A4B QAT",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 92160,
+          "maxTokens": 32768,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "google/gemma-4-e4b",
+          "name": "Gemma 4 E4B",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 131072,
+          "maxTokens": 32768,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "qwen/qwen3.5-9b",
+          "name": "Qwen 3.5 9B",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "contextWindow": 262144,
+          "maxTokens": 32768,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        }
+      ]
+    }
+  }
+}
