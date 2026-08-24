@@ -9,14 +9,14 @@ case "$EVENT" in
   PreToolUse)
     TOOL=$(jq -r '.tool_name' <<<"$INPUT")
     case "$TOOL" in
-      Bash)       MSG="Running $(jq -r '.tool_input.command' <<<"$INPUT" | cut -c1-50)" ;;
+      Bash)       MSG="Running $(jq -r '.tool_input.description // .tool_input.command' <<<"$INPUT" | cut -c1-50)" ;;
       Edit|Write) MSG="Editing $(basename "$(jq -r '.tool_input.file_path' <<<"$INPUT")")" ;;
       *)          MSG="Using $TOOL" ;;
     esac ;;
   Stop)
     MSG=$(jq -r '.last_assistant_message // "Done"' <<<"$INPUT" \
       | awk '/^```/{f=!f; next} !f' \
-      | sed -E 's/`([^`]*)`/\1/g; s/\*+([^*]*)\*+/\1/g; s/^#+ //; s#https?://[^ ]*# link #g' \
+      | sed -E 's/\[([^]]*)\]\([^)]*\)/\1/g; s/`([^`]*)`/\1/g; s/\*+([^*]*)\*+/\1/g; s/^#+ //; s#https?://[^ ]*# link #g' \
       | tr -s ' \n' ' ')
 esac
 
