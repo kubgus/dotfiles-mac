@@ -70,6 +70,9 @@ alias claudeskip="killall say"
 # Git aliases
 # -----------------------
 alias gs="git status"
+alias gw="git show"
+alias gwc="git show HEAD" # git show current (HEAD)
+alias gwp="git show HEAD^" # git show previous (HEAD^)
 alias ga="git add"
 alias gaa="git add ." # git add all
 alias gr="git reset"
