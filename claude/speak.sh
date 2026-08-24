@@ -3,16 +3,25 @@ INPUT=$(cat)
 EVENT=$(jq -r '.hook_event_name // empty' <<<"$INPUT")
 Q="$HOME/.claude/speech-queue"; mkdir -p "$Q"
 
+# PermissionRequest and PreToolUse carry the same tool_name/tool_input, so
+# both describe the pending call the same way - only the framing differs.
+describe_tool() {
+  local tool
+  tool=$(jq -r '.tool_name // empty' <<<"$INPUT")
+  case "$tool" in
+    Bash)       echo "Running $(jq -r '.tool_input.description // .tool_input.command' <<<"$INPUT" | cut -c1-50)" ;;
+    Edit|Write) echo "Editing $(basename "$(jq -r '.tool_input.file_path' <<<"$INPUT")")" ;;
+    ?*)         echo "Using $tool" ;;
+  esac
+}
+
 case "$EVENT" in
-  PermissionRequest|Notification)
+  PermissionRequest)
+    MSG="Claude needs you. $(describe_tool)" ;;
+  Notification)
     MSG="Claude needs you." ;;
   PreToolUse)
-    TOOL=$(jq -r '.tool_name' <<<"$INPUT")
-    case "$TOOL" in
-      Bash)       MSG="Running $(jq -r '.tool_input.description // .tool_input.command' <<<"$INPUT" | cut -c1-50)" ;;
-      Edit|Write) MSG="Editing $(basename "$(jq -r '.tool_input.file_path' <<<"$INPUT")")" ;;
-      *)          MSG="Using $TOOL" ;;
-    esac ;;
+    MSG=$(describe_tool) ;;
   Stop)
     MSG=$(jq -r '.last_assistant_message // "Done"' <<<"$INPUT" \
       | awk '/^```/{f=!f; next} !f' \
