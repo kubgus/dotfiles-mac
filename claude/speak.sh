@@ -5,7 +5,7 @@ Q="$HOME/.claude/speech-queue"; mkdir -p "$Q"
 
 case "$EVENT" in
   PermissionRequest|Notification)
-    MSG="Claude needs you. $(jq -r '.tool_name // .message // ""' <<<"$INPUT")" ;;
+    MSG="Claude needs you." ;;
   PreToolUse)
     TOOL=$(jq -r '.tool_name' <<<"$INPUT")
     case "$TOOL" in
