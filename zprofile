@@ -61,9 +61,10 @@ alias pnpm="socket pnpm"
 alias yarn="socket yarn"
 
 # -----------------------
-# Claude code as chat
+# Claude hands-free mode
 # -----------------------
-alias claudechat="cd $HOME/Documents/Claude/ && claude"
+alias claudeagain="~/.claude/say-again.sh"
+alias claudeskip="killall say"
 
 # -----------------------
 # Git aliases
