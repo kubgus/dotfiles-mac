@@ -1,0 +1,25 @@
+#!/bin/bash
+# Bring Claude to the front and confirm whatever permission prompt is waiting,
+# so a prompt can be answered without leaving the app you are working in.
+#
+# Bind this to a system-wide key in Shortcuts.app (Run Shell Script action).
+#
+# The keystroke lands on whatever Claude happens to be showing, so this
+# confirms without you reading the prompt first. It is meant to answer a
+# request you just heard announced by speak.sh - not to approve blind. If
+# nothing is pending, the return key goes to whatever has focus in Claude.
+set -euo pipefail
+
+osascript - <<'APPLESCRIPT'
+tell application "Claude" to activate
+
+-- Give the window a moment to come forward before typing into it.
+delay 0.2
+
+tell application "System Events"
+  tell process "Claude"
+    set frontmost to true
+    keystroke return
+  end tell
+end tell
+APPLESCRIPT

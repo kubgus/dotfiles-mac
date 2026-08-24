@@ -71,5 +71,10 @@ for f in settings.json models.json; do
     link_file "$DOTFILES_DIR/pi/agent/$f" "$HOME/.pi/agent/$f"
 done
 
+# Scripts meant to be run by name from anywhere.
+for f in claude-approve; do
+    link_file "$DOTFILES_DIR/bin/$f" "$HOME/Bin/$f"
+done
+
 # Keeps the speaker daemon alive across logins.
 install_agent com.gustafik.claude-speaker
