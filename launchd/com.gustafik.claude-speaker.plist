@@ -3,7 +3,7 @@
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.local.claude-speaker</string>
+  <key>Label</key><string>com.gustafik.claude-speaker</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>

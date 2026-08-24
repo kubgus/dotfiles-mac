@@ -41,7 +41,10 @@ install_agent() {
 
     sed "s#__HOME__#$HOME#g" "$src" > "$tmp"
 
-    if [ -f "$dest" ] && [ ! -L "$dest" ] && cmp -s "$tmp" "$dest"; then
+    # Also require the service to be loaded, so a renamed Label or a manually
+    # unloaded agent is repaired instead of silently skipped.
+    if [ -f "$dest" ] && [ ! -L "$dest" ] && cmp -s "$tmp" "$dest" \
+        && launchctl print "gui/$UID/$label" >/dev/null 2>&1; then
         return
     fi
 
@@ -69,4 +72,4 @@ for f in settings.json models.json; do
 done
 
 # Keeps the speaker daemon alive across logins.
-install_agent com.local.claude-speaker
+install_agent com.gustafik.claude-speaker
