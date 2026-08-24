@@ -5,5 +5,29 @@
     "@franlol/opencode-md-table-formatter@0.0.3"
   ],
 
-  "lsp": true
+  "lsp": true,
+
+  "provider": {
+    "lms": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:7798/v1"
+      },
+      "models": {
+        "google/gemma-4-26b-a4b-qat": {
+          "name": "Gemma 4 26B A4B QAT",
+          "limit": { "context": 92160, "output": 32768 }
+        },
+        "google/gemma-4-e4b": {
+          "name": "Gemma 4 E4B",
+          "limit": { "context": 131072, "output": 32768 }
+        },
+        "qwen/qwen3.5-9b": {
+          "name": "Qwen3.5 9B",
+          "limit": { "context": 262144, "output": 32768 }
+        }
+      }
+    }
+  }
 }
