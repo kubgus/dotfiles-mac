@@ -61,12 +61,6 @@ alias pnpm="socket pnpm"
 alias yarn="socket yarn"
 
 # -----------------------
-# Claude hands-free mode
-# -----------------------
-alias claude-again="~/.claude/say-again.sh"
-alias claude-skip="killall say"
-
-# -----------------------
 # Git aliases
 # -----------------------
 alias gs="git status"
