@@ -4,6 +4,7 @@ H="$HOME/.claude/speech-history"
 W="$HOME/.claude/speech-work"
 APPS=("Music" "Spotify")
 DUCK=20          # percent of original volume while speaking
+PERM_TTL=60      # seconds a permission request stays worth announcing
 mkdir -p "$Q" "$H" "$W"
 
 # Anything left here was interrupted mid-sentence by a crash or a restart.
@@ -43,6 +44,15 @@ while true; do
     # who won: if it fails, the message is already gone and must not be said.
     n=$(basename "$f")
     mv "$f" "$W/$n" 2>/dev/null || continue
+
+    # speak.sh drops a permission request once the call it guarded has run.
+    # A manual denial has no such signal, so age it out instead: a prompt sat
+    # on this long is answered, or is on screen where it can be read.
+    if [ "${n##*.}" = "perm" ] && [ $(( $(date +%s) - ${n%%.*} )) -ge "$PERM_TTL" ]; then
+      rm -f "$W/$n"
+      continue
+    fi
+
     duck
     afplay -t 0.3 /System/Library/Sounds/Glass.aiff 2>/dev/null
     say -f "$W/$n"

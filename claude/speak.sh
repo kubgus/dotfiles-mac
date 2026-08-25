@@ -16,18 +16,22 @@ describe_tool() {
   esac
 }
 
-# Take back a queued announcement the daemon has not started speaking yet.
-# The move is the claim: if it fails the daemon already owns the file.
+# Take back queued messages the daemon has not started speaking yet, matching
+# $1 as a filename suffix and $2 as the phrase the message ends with. The move
+# is the claim: if it fails the daemon already owns the file and it is too late.
 cancel_queued() {
-  local f
-  for f in "$Q"/*.pre; do
+  local f found=1
+  for f in "$Q"/*"$1"; do
     [ -e "$f" ] || continue
-    [ "$(cat "$f" 2>/dev/null)" = "$1" ] || continue
-    mv "$f" "$S/cancelled" 2>/dev/null || return 1
+    case "$(cat "$f" 2>/dev/null)" in
+      *"$2") ;;
+      *) continue ;;
+    esac
+    mv "$f" "$S/cancelled" 2>/dev/null || continue
     rm -f "$S/cancelled"
-    return 0
+    found=0
   done
-  return 1
+  return $found
 }
 
 case "$EVENT" in
@@ -39,11 +43,18 @@ case "$EVENT" in
     WHAT=$(describe_tool)
     if [ "$WHAT" != "$(cat "$S/announced" 2>/dev/null)" ]; then
       MSG="Claude needs your permission $WHAT"   # nothing announced this
-    elif cancel_queued "$WHAT"; then
+    elif cancel_queued .pre "$WHAT"; then
       MSG="Claude needs your permission $WHAT"   # pulled it back in time
     else
       MSG="Claude needs your permission."         # too late, already spoken
-    fi ;;
+    fi
+    SUFFIX=".perm" ;;
+  PostToolUse|PostToolUseFailure)
+    # The call ran, so its prompt is answered and gone. Anything still queued
+    # about it is stale - which happens whenever a long spoken reply is still
+    # playing while the next turn's prompts are already being approved.
+    # Neither event fires on a manual denial; the daemon expires those on age.
+    cancel_queued .perm "$(describe_tool)" || true ;;
   Notification)
     MSG="Claude needs your attention." ;;
   PreToolUse)

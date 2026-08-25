@@ -14,6 +14,12 @@
     "PreToolUse": [
       { "matcher": "Bash|Edit|Write", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
     ],
+    "PostToolUse": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
+    ],
+    "PostToolUseFailure": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
+    ],
     "Stop": [
       { "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
     ]
