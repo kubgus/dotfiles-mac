@@ -63,8 +63,8 @@ alias yarn="socket yarn"
 # -----------------------
 # Claude hands-free mode
 # -----------------------
-alias claudeagain="~/.claude/say-again.sh"
-alias claudeskip="killall say"
+alias claude-again="~/.claude/say-again.sh"
+alias claude-skip="killall say"
 
 # -----------------------
 # Git aliases
