@@ -16,8 +16,8 @@ for f in settings.json speak.sh say-again.sh speaker-daemon.sh; do
     link_file "$DOTFILES_DIR/claude/$f" "$HOME/.claude/$f"
 done
 
-# claude-approve itself is linked onto PATH by the shell domain; this is the
-# app it drives, which is what actually holds the Accessibility grant.
+# Bind this app to a system-wide key to answer a prompt without leaving the
+# app you are in. It holds the Accessibility grant, so it is what macOS lists.
 build_applet claude-approve "Claude Approve"
 
 # Keeps the speaker daemon alive across logins.
