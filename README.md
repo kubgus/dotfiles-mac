@@ -76,6 +76,11 @@ when its source changes, because a rebuild changes the signature and macOS then
 reads it as a different app - **so a source change means re-granting
 Accessibility**: remove the entry and add it back.
 
+**Don't bind the applet to a shortcut containing Control.** Holding Control as
+an AppleScript applet launches forces its Run/Quit startup screen, whatever
+`OSAAppletShowStartupScreen` is set to. The script cannot suppress it, so the
+binding has to avoid Control - which rules out the otherwise ideal `⌃⌥⌘` layer.
+
 **Nothing is ever pruned.** Setup creates and repairs symlinks but never
 removes them. Delete something from `bin/` and its link in `~/Bin` is left
 dangling; clean it up by hand.

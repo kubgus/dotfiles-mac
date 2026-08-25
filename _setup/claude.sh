@@ -77,6 +77,10 @@ done
 
 # Bind this app to a system-wide key to answer a prompt without leaving the
 # app you are in. It holds the Accessibility grant, so it is what macOS lists.
+#
+# Do not bind it to a shortcut containing Control. Holding Control as an
+# AppleScript applet launches forces its Run/Quit startup screen, whatever
+# OSAAppletShowStartupScreen says.
 build_applet claude-approve "Claude Approve"
 
 # Keeps the speaker daemon alive across logins.
