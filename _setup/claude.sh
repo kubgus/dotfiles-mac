@@ -1,39 +1,18 @@
 #!/bin/bash
-# Helpers shared by the setup scripts. Sourced, not run.
+# Claude Code, and the hands-free setup around it: speak.sh announces what
+# Claude is about to do, the daemon reads the queue aloud, and the applet
+# answers the permission prompt you just heard without leaving the app you
+# are in.
 #
-# Every helper is idempotent and quiet: a second run should print nothing and
-# change nothing, so any output means something actually happened.
+# The pieces are not separable - the hooks that drive the speech live in
+# settings.json, so splitting the voice control out would mean splitting a
+# single file across two domains.
+set -euo pipefail
+# shellcheck source=_setup/lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-link_file() {
-    local src="$1"
-    local dest="$2"
-
-    mkdir -p "$(dirname "$dest")"
-
-    # If dest exists and is not the correct symlink, back it up
-    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-        echo "Backing up $dest -> $dest.backup"
-        mv "$dest" "$dest.backup"
-    fi
-
-    # If symlink exists but points elsewhere, replace it
-    if [ -L "$dest" ]; then
-        current="$(readlink "$dest")"
-        if [ "$current" != "$src" ]; then
-            echo "Updating symlink $dest -> $src"
-            rm "$dest"
-            ln -s "$src" "$dest"
-        fi
-    else
-        echo "Creating symlink $dest -> $src"
-        ln -s "$src" "$dest"
-    fi
-}
-
-# launchd refuses to load a symlinked plist, so agents are rendered as real
-# copies. Edit the template in launchd/ and re-run setup to apply changes.
+# launchd refuses to load a symlinked plist, so the agent is rendered as a real
+# copy. Edit the template in launchd/ and re-run this to apply changes.
 install_agent() {
     local label="$1"
     local src="$DOTFILES_DIR/launchd/$label.plist"
@@ -90,3 +69,15 @@ build_applet() {
     # macOS refuses to launch a bundle whose seal is broken.
     codesign --force --sign - "$app" 2>/dev/null
 }
+
+# ~/.claude also holds sessions, projects and telemetry, so link file by file.
+for f in settings.json speak.sh say-again.sh speaker-daemon.sh; do
+    link_file "$DOTFILES_DIR/claude/$f" "$HOME/.claude/$f"
+done
+
+# Bind this app to a system-wide key to answer a prompt without leaving the
+# app you are in. It holds the Accessibility grant, so it is what macOS lists.
+build_applet claude-approve "Claude Approve"
+
+# Keeps the speaker daemon alive across logins.
+install_agent com.gustafik.claude-speaker
