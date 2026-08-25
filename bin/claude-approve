@@ -4,10 +4,10 @@
 #
 # Bind this to a system-wide key in Shortcuts.app (Run Shell Script action).
 #
-# The keystroke lands on whatever Claude happens to be showing, so this
-# confirms without you reading the prompt first. It is meant to answer a
-# request you just heard announced by speak.sh - not to approve blind. If
-# nothing is pending, the return key goes to whatever has focus in Claude.
+# Cmd-Return lands on whatever Claude happens to be showing, so this confirms
+# without you reading the prompt first. It is meant to answer a request you
+# just heard announced by speak.sh - not to approve blind. With nothing
+# pending the keystroke still goes through, to whatever has focus in Claude.
 set -euo pipefail
 
 osascript - <<'APPLESCRIPT'
@@ -19,7 +19,7 @@ delay 0.2
 tell application "System Events"
   tell process "Claude"
     set frontmost to true
-    keystroke return
+    keystroke return using command down
   end tell
 end tell
 APPLESCRIPT
