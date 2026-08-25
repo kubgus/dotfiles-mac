@@ -4,22 +4,22 @@
 #
 # Bind this to a system-wide key in Shortcuts.app (Run Shell Script action).
 #
+# The work happens in an app bundle rather than here, because macOS attributes
+# Accessibility to whatever sends the keystroke: as a bare osascript call the
+# grant would have to go to /usr/bin/osascript, and every script on the machine
+# would inherit the ability to type. _setup.sh builds the app.
+#
 # Cmd-Return lands on whatever Claude happens to be showing, so this confirms
 # without you reading the prompt first. It is meant to answer a request you
 # just heard announced by speak.sh - not to approve blind. With nothing
 # pending the keystroke still goes through, to whatever has focus in Claude.
 set -euo pipefail
 
-osascript - <<'APPLESCRIPT'
-tell application "Claude" to activate
+APP="$HOME/Applications/Claude Approve.app"
 
--- Give the window a moment to come forward before typing into it.
-delay 0.2
+if [ ! -d "$APP" ]; then
+    echo "claude-approve: $APP is missing - run the dotfiles _setup.sh." >&2
+    exit 1
+fi
 
-tell application "System Events"
-  tell process "Claude"
-    set frontmost to true
-    keystroke return using command down
-  end tell
-end tell
-APPLESCRIPT
+open "$APP"

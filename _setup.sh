@@ -71,6 +71,39 @@ for f in settings.json models.json; do
     link_file "$DOTFILES_DIR/pi/agent/$f" "$HOME/.pi/agent/$f"
 done
 
+# AppleScript that sends keystrokes needs its own app identity: macOS grants
+# Accessibility to whatever does the sending, and via /usr/bin/osascript that
+# would be every script on the machine. Rebuilt only when the source changes,
+# because recompiling makes macOS treat it as a new app and forget the grant.
+build_applet() {
+    local name="$1"
+    local src="$DOTFILES_DIR/applescript/$name.applescript"
+    local app="$HOME/Applications/$2.app"
+
+    if [ -d "$app" ] && [ ! "$src" -nt "$app" ]; then
+        return
+    fi
+
+    echo "Building applet $2"
+    mkdir -p "$HOME/Applications"
+    rm -rf "$app"
+    osacompile -o "$app" "$src"
+
+    # No dock icon, so triggering it doesn't pull focus away from Claude.
+    /usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" \
+        "$app/Contents/Info.plist" >/dev/null
+    # osacompile leaves the bundle unidentified; TCC remembers a grant more
+    # reliably against a stable identifier than against the path alone.
+    /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.gustafik.$name" \
+        "$app/Contents/Info.plist" >/dev/null
+
+    # Editing Info.plist invalidates the signature osacompile applied, and
+    # macOS refuses to launch a bundle whose seal is broken.
+    codesign --force --sign - "$app" 2>/dev/null
+}
+
+build_applet claude-approve "Claude Approve"
+
 # Scripts meant to be run by name from anywhere. ~/Bin is already on PATH and
 # also holds links into other repos, so link each script rather than the dir.
 for f in "$DOTFILES_DIR"/bin/*; do
