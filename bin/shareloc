@@ -1,0 +1,23 @@
+#!/bin/sh
+
+ANSI_RED='\033[0;31m'
+ANSI_GREEN='\033[0;32m'
+ANSI_BLUE='\033[0;34m'
+ANSI_RESET='\033[0m'
+
+dir=$HOME/Public/Share
+
+ip=$(ipconfig getifaddr en0)
+port=${1:-8080}
+
+url="http://$ip:$port"
+
+echo "Sharing directory: $ANSI_BLUE$dir$ANSI_RESET."
+echo "Accessible at: $ANSI_BLUE$url$ANSI_RESET. $ANSI_GREEN(copied to clipboard)$ANSI_RESET"
+echo "Server logs will be displayed below. Press $ANSI_RED<Ctrl+C>$ANSI_RESET to stop sharing."
+
+cd $dir
+
+echo "$url" | pbcopy
+
+python3 -m http.server --bind $ip $port

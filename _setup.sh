@@ -71,9 +71,10 @@ for f in settings.json models.json; do
     link_file "$DOTFILES_DIR/pi/agent/$f" "$HOME/.pi/agent/$f"
 done
 
-# Scripts meant to be run by name from anywhere.
-for f in claude-approve; do
-    link_file "$DOTFILES_DIR/bin/$f" "$HOME/Bin/$f"
+# Scripts meant to be run by name from anywhere. ~/Bin is already on PATH and
+# also holds links into other repos, so link each script rather than the dir.
+for f in "$DOTFILES_DIR"/bin/*; do
+    link_file "$f" "$HOME/Bin/$(basename "$f")"
 done
 
 # Keeps the speaker daemon alive across logins.

@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Define credentials
+personal_name="Jakub Guštafik"
+personal_email="mail@gustafik.com"
+
+# Default to local scope
+scope=""
+
+# Parse flags
+while getopts "g" opt; do
+  case $opt in
+    g)
+      scope="--global"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Shift off the options so they don't interfere with other arguments
+shift $((OPTIND -1))
+
+# ========================================================
+
+echo "Targeting: ${scope:-local (current directory)}"
+read -p "Select credentials to use (personal/...): " choice
+
+# Validate input exists
+name_var="${choice}_name"
+email_var="${choice}_email"
+
+if [[ -z "${!name_var}" ]]; then
+    echo "Error: Credentials for '${choice}' not found."
+    exit 1
+fi
+
+# Use indirect expansion to get values
+name="${!name_var}"
+email="${!email_var}"
+
+echo "Configuring Git ${scope} with '${choice}' credentials..."
+
+echo "Setting user.name to '${name}'"
+git config $scope user.name "$name"
+
+echo "Setting user.email to '${email}'"
+git config $scope user.email "$email"
+
+echo "Done!"
