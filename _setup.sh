@@ -1,7 +1,7 @@
 #!/bin/bash
 # Set up this machine from the dotfiles.
 #
-# With no arguments every domain in setup/ runs. Name one or more to run just
+# With no arguments every domain in _setup/ runs. Name one or more to run just
 # those - ./_setup.sh claude - which is the quicker loop when you have changed
 # one thing and want it applied.
 #
@@ -9,7 +9,7 @@
 # that found everything already in place.
 set -euo pipefail
 
-SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/setup" && pwd)"
+SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/_setup" && pwd)"
 
 available() {
     local f name
