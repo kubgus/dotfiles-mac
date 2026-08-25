@@ -42,6 +42,8 @@ try
 		end tell
 	end tell
 	set approved to true
+	-- Backgrounded: the confirmation should not hold up handing focus back.
+	do shell script "afplay /System/Library/Sounds/Funk.aiff >/dev/null 2>&1 &"
 on error errMsg number errNum
 	-- -1002 is a refused keystroke, -1743 a refused Apple event. Without this
 	-- an applet answers a failure with a dialog offering to open its own
