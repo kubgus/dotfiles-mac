@@ -17,7 +17,7 @@ describe_tool() {
   local tool
   tool=$(jq -r '.tool_name // empty' <<<"$INPUT")
   case "$tool" in
-    Bash)       echo "Running $(jq -r '.tool_input.description // empty' <<<"$INPUT")" ;;
+    Bash)       echo "Running $(jq -r '.tool_input.description // "a command"' <<<"$INPUT")" ;;
     Edit|Write) echo "Editing $(basename "$(jq -r '.tool_input.file_path' <<<"$INPUT")")" ;;
     ?*)         echo "Using $tool" ;;
   esac
