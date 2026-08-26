@@ -6,8 +6,10 @@ LOCK="$HOME/.claude/speaker-daemon.pid"
 APPS=("Music" "Spotify")
 DUCK=20          # percent of original volume while speaking
 PERM_TTL=60      # seconds a permission request stays worth announcing
-SAY_TIMEOUT=30   # seconds before a wedged `say` is killed, so a stuck audio
-                 # device can't strand the loop (and the duck) indefinitely
+SAY_WPM=90       # pessimistic speaking rate used to size the wedge watchdog;
+                 # `say` really does ~175, so this already errs long
+SAY_GRACE=2      # multiplier on that estimate, floored by SAY_FLOOR
+SAY_FLOOR=60
 mkdir -p "$Q" "$H" "$W"
 
 # Two instances ducking/unducking the same apps desync which volume counts as
@@ -51,10 +53,20 @@ prune() {
 # Runs `say` in the background so a TERM/INT signal interrupts it right away
 # instead of queueing behind it, and kills it if it wedges - so a stuck audio
 # device can't strand the daemon (and the duck) until someone force-kills it.
+#
+# The watchdog has to outlast the message, or it truncates instead of rescuing:
+# a long transcript legitimately takes minutes to read. Size it from the text
+# and keep the margin fat - this exists to catch a `say` that is not speaking
+# at all, so being late costs nothing and being early costs the message.
 speak() {
+  local words limit
+  words=$(wc -w < "$1")
+  limit=$(( words * 60 / SAY_WPM * SAY_GRACE ))
+  [ "$limit" -lt "$SAY_FLOOR" ] && limit=$SAY_FLOOR
+
   say -f "$1" &
   SAY_PID=$!
-  ( sleep "$SAY_TIMEOUT"; kill "$SAY_PID" 2>/dev/null ) &
+  ( sleep "$limit"; kill "$SAY_PID" 2>/dev/null ) &
   local watcher=$!
   wait "$SAY_PID" 2>/dev/null
   kill "$watcher" 2>/dev/null

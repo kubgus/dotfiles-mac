@@ -1,4 +1,11 @@
 #!/bin/bash
+# The daemon is the on switch. With it stopped there is nothing to read the
+# queue, so anything written here would be discarded at its next start anyway -
+# and the chime would be the one sound still escaping. Staying silent makes
+# stopping the daemon a complete mute, which is the point.
+D="$HOME/.claude/speaker-daemon.pid"
+[ -f "$D" ] && kill -0 "$(cat "$D" 2>/dev/null)" 2>/dev/null || exit 0
+
 INPUT=$(cat)
 EVENT=$(jq -r '.hook_event_name // empty' <<<"$INPUT")
 Q="$HOME/.claude/speech-queue"; mkdir -p "$Q"
@@ -10,7 +17,7 @@ describe_tool() {
   local tool
   tool=$(jq -r '.tool_name // empty' <<<"$INPUT")
   case "$tool" in
-    Bash)       echo "Running $(jq -r '.tool_input.description // .tool_input.command' <<<"$INPUT")" ;;
+    Bash)       echo "Running $(jq -r '.tool_input.description // empty' <<<"$INPUT")" ;;
     Edit|Write) echo "Editing $(basename "$(jq -r '.tool_input.file_path' <<<"$INPUT")")" ;;
     ?*)         echo "Using $tool" ;;
   esac
