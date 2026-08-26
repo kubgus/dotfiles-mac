@@ -2,15 +2,30 @@
 Q="$HOME/.claude/speech-queue"
 H="$HOME/.claude/speech-history"
 W="$HOME/.claude/speech-work"
+LOCK="$HOME/.claude/speaker-daemon.pid"
 APPS=("Music" "Spotify")
 DUCK=20          # percent of original volume while speaking
 PERM_TTL=60      # seconds a permission request stays worth announcing
+SAY_TIMEOUT=30   # seconds before a wedged `say` is killed, so a stuck audio
+                 # device can't strand the loop (and the duck) indefinitely
 mkdir -p "$Q" "$H" "$W"
+
+# Two instances ducking/unducking the same apps desync which volume counts as
+# "original" - refuse to start alongside one that's still alive.
+if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK" 2>/dev/null)" 2>/dev/null; then
+  echo "speaker-daemon already running (pid $(cat "$LOCK"))" >&2
+  exit 1
+fi
+echo $$ > "$LOCK"
 
 # Anything left here was interrupted mid-sentence by a crash or a restart.
 rm -f "$W"/*
 
+# Skip whatever piled up while the daemon was down - start fresh, not backlogged.
+rm -f "$Q"/*
+
 SAVED=()
+SAY_PID=
 
 duck() {
   SAVED=()
@@ -33,7 +48,21 @@ prune() {
   ls -1 "$H" | sort -rn | tail -n +21 | while read -r old; do rm -f "$H/$old"; done
 }
 
-trap 'unduck; exit' INT TERM
+# Runs `say` in the background so a TERM/INT signal interrupts it right away
+# instead of queueing behind it, and kills it if it wedges - so a stuck audio
+# device can't strand the daemon (and the duck) until someone force-kills it.
+speak() {
+  say -f "$1" &
+  SAY_PID=$!
+  ( sleep "$SAY_TIMEOUT"; kill "$SAY_PID" 2>/dev/null ) &
+  local watcher=$!
+  wait "$SAY_PID" 2>/dev/null
+  kill "$watcher" 2>/dev/null
+  wait "$watcher" 2>/dev/null
+  SAY_PID=
+}
+
+trap '[ -n "$SAY_PID" ] && kill "$SAY_PID" 2>/dev/null; unduck; rm -f "$LOCK"; exit' INT TERM
 prune
 
 while true; do
@@ -54,8 +83,7 @@ while true; do
     fi
 
     duck
-    afplay -t 0.3 /System/Library/Sounds/Glass.aiff 2>/dev/null
-    say -f "$W/$n"
+    speak "$W/$n"
     unduck
     mv -f "$W/$n" "$H/$n"
     prune

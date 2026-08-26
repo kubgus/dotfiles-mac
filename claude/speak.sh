@@ -68,6 +68,10 @@ case "$EVENT" in
       | tr -s ' \n' ' ')
 esac
 
-[ -n "$MSG" ] && printf '%s' "$MSG" \
-  > "$Q/$(perl -MTime::HiRes=time -e 'printf "%.6f", time')${SUFFIX:-}"
+if [ -n "$MSG" ]; then
+  printf '%s' "$MSG" > "$Q/$(perl -MTime::HiRes=time -e 'printf "%.6f", time')${SUFFIX:-}"
+  # Chime the instant the message lands in the queue, not when its turn to be
+  # spoken comes up - so it's heard right away even behind a long backlog.
+  afplay -t 0.3 /System/Library/Sounds/Glass.aiff 2>/dev/null &
+fi
 exit 0
