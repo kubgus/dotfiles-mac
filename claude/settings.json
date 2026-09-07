@@ -8,20 +8,8 @@
   },
   "skipWorkflowUsageWarning": true,
   "hooks": {
-    "PermissionRequest": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
-    ],
-    "PreToolUse": [
-      { "matcher": "Bash|Edit|Write", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
-    ],
-    "PostToolUse": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
-    ],
-    "PostToolUseFailure": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
-    ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "$HOME/.claude/speak.sh" }] }
+      { "hooks": [{ "type": "command", "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &" }] }
     ]
   }
 }

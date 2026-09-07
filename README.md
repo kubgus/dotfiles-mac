@@ -4,8 +4,8 @@ macOS configuration, kept in one place and applied by symlink.
 
 Everything here is the real file; what lives in `$HOME` points back at it. Edit
 in the repo, and the change is live - no copying step, no drift between the two.
-The exceptions are the two things macOS refuses to read through a symlink, and
-both are noted below.
+The one exception is the approve applet, which has to be compiled into an app
+rather than linked, and is noted below.
 
 ## Applying it
 
@@ -32,10 +32,9 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `_setup/` | One script per domain, plus `lib.sh`. |
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
-| `claude/` | Claude Code settings and the hands-free speech scripts. |
+| `claude/` | Claude Code settings. |
 | `pi/` | Pi agent config. |
 | `applescript/` | Sources for apps built at setup time. |
-| `launchd/` | Launch agent templates. |
 | `zprofile` | Linked to `~/.zprofile`. |
 
 ## Domains
@@ -44,13 +43,12 @@ Each is a script in `_setup/`, runnable on its own:
 
 - **`config`** - `~/.config`
 - **`shell`** - `~/.zprofile`, and everything in `bin/`
-- **`claude`** - Claude Code settings, the speech scripts, the approve applet,
-  and the launch agent that keeps the speaker daemon alive
+- **`claude`** - Claude Code settings and the approve applet
 - **`pi`** - Pi agent config
 
 `_setup/lib.sh` holds `link_file`, the one helper every domain needs. A helper
-used by a single domain lives in that domain's script instead - `install_agent`
-and `build_applet` are only ever called by `claude`, so that is where they are.
+used by a single domain lives in that domain's script instead - `build_applet`
+is only ever called by `claude`, so that is where it is.
 
 ## Things that are not obvious
 
@@ -62,11 +60,10 @@ so anything not whitelisted still works locally, it just isn't tracked.
 session state, telemetry and caches. Only the portable files are tracked;
 `auth.json`, `sessions/` and `npm/` stay machine-local.
 
-**Launch agents are copied, not linked.** launchd refuses to load a symlinked
-plist - it fails with `Bootstrap failed: 5: Input/output error`. The templates
-in `launchd/` use `__HOME__` in place of a hardcoded path and are rendered into
-`~/Library/LaunchAgents` at setup. Because it is a copy, **editing the installed
-file does nothing**: change the template and re-run setup.
+**The end-of-turn sound has an off switch outside the repo.** Claude Code's
+`Stop` hook plays a sound when a turn ends. `touch ~/.claude/mute` silences it;
+delete the file to bring it back. It is deliberately untracked - per-machine,
+per-mood state rather than configuration.
 
 **The approve applet is an app for a reason.** macOS grants Accessibility to
 whatever sends a keystroke. Run through `/usr/bin/osascript` the grant would
