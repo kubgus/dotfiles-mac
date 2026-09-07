@@ -8,6 +8,9 @@
   },
   "skipWorkflowUsageWarning": true,
   "hooks": {
+    "PermissionRequest": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &" }] }
+    ],
     "Stop": [
       { "hooks": [{ "type": "command", "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &" }] }
     ]

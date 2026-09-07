@@ -1,7 +1,7 @@
 #!/bin/bash
-# Claude Code: its settings - including the Stop hook that plays a sound when a
-# turn ends - and the applet that answers a permission prompt without leaving
-# the app you are in.
+# Claude Code: its settings - including the hooks that chime when a turn ends
+# and when a permission prompt is waiting - and the applet that answers that
+# prompt without leaving the app you are in.
 set -euo pipefail
 # shellcheck source=_setup/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"

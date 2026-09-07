@@ -60,10 +60,11 @@ so anything not whitelisted still works locally, it just isn't tracked.
 session state, telemetry and caches. Only the portable files are tracked;
 `auth.json`, `sessions/` and `npm/` stay machine-local.
 
-**The end-of-turn sound has an off switch outside the repo.** Claude Code's
-`Stop` hook plays a sound when a turn ends. `touch ~/.claude/mute` silences it;
-delete the file to bring it back. It is deliberately untracked - per-machine,
-per-mood state rather than configuration.
+**The notification sounds have an off switch outside the repo.** Two hooks
+chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
+ends. They sit in different frequency registers so they stay apart over music.
+`touch ~/.claude/mute` silences both; delete the file to bring them back. It is
+deliberately untracked - per-machine, per-mood state rather than configuration.
 
 **The approve applet is an app for a reason.** macOS grants Accessibility to
 whatever sends a keystroke. Run through `/usr/bin/osascript` the grant would
