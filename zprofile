@@ -53,6 +53,12 @@ export LDFLAGS="-L/opt/homebrew/opt/ffmpeg-full/lib"
 export CPPFLAGS="-I/opt/homebrew/opt/ffmpeg-full/include"
 
 # -----------------------
+# Disable sleep
+# -----------------------
+alias disablesleep="sudo pmset -a disablesleep 1"
+alias enablesleep="sudo pmset -a disablesleep 0"
+
+# -----------------------
 # Secure node aliases
 # -----------------------
 alias npm="socket npm"
@@ -99,6 +105,7 @@ alias gbs="git switch"
 alias gbsn="git switch -c" # git switch new (branch)
 alias gbm="git merge"
 alias gbuc="git branch --set-upstream-to=origin/main main"
+alias gbr="git branch -m" # git branch rename
 alias gl="git log"
 alias glg="git log --oneline --graph --decorate" # git log graph
 alias gla="git log --all --oneline --graph --decorate" # git log all
