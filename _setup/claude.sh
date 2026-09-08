@@ -8,3 +8,4 @@ set -euo pipefail
 # ~/.claude also holds sessions, projects and telemetry, so link the one file
 # we own rather than the directory.
 link_file "$DOTFILES_DIR/claude/settings.json" "$HOME/.claude/settings.json"
+link_file "$DOTFILES_DIR/claude/statusline.sh" "$HOME/.claude/statusline.sh"

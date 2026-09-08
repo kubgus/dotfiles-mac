@@ -1,18 +1,77 @@
 {
-  "model": "haiku",
-  "theme": "auto",
-  "voiceEnabled": true,
+  "env": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits"
+  },
+  "model": "opus[1m]",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '\\033]0;⚡ %s\\007' \"${PWD##*/}\" > /dev/tty; exit 0"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &"
+          },
+          {
+            "type": "command",
+            "command": "printf '\\033]0;❓ %s\\007\\a' \"${PWD##*/}\" > /dev/tty; exit 0"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &"
+          },
+          {
+            "type": "command",
+            "command": "printf '\\033]0;✅ %s\\007\\a' \"${PWD##*/}\" > /dev/tty; exit 0"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '\\033]0;\\007' > /dev/tty; exit 0"
+          }
+        ]
+      }
+    ]
+  },
+  "worktree": {
+    "baseRef": "fresh"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash \"$HOME/.claude/statusline.sh\""
+  },
+  "effortLevel": "high",
   "voice": {
     "enabled": true,
     "mode": "hold"
   },
   "skipWorkflowUsageWarning": true,
-  "hooks": {
-    "PermissionRequest": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &" }] }
-    ],
-    "Stop": [
-      { "hooks": [{ "type": "command", "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &" }] }
-    ]
-  }
+  "editorMode": "vim",
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": false,
+  "voiceEnabled": true
 }
