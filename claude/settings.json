@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;⚡ %s\\007' \"${n##*/}\" > \"$d\"; exit 0"
+            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;🌀 %s\\007' \"${n##*/}\" > \"$d\"; exit 0"
           }
         ]
       }
@@ -27,7 +27,7 @@
           },
           {
             "type": "command",
-            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;❓ %s\\007\\a' \"${n##*/}\" > \"$d\"; exit 0"
+            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;🔴 %s\\007\\a' \"${n##*/}\" > \"$d\"; exit 0"
           }
         ]
       }
@@ -41,7 +41,7 @@
           },
           {
             "type": "command",
-            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;✅ %s\\007\\a' \"${n##*/}\" > \"$d\"; exit 0"
+            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;💤 %s\\007\\a' \"${n##*/}\" > \"$d\"; exit 0"
           }
         ]
       }
