@@ -106,7 +106,7 @@ Shell scripts here should be `shellcheck`-clean, and start with
 `set -euo pipefail` unless there is a reason not to. Check them with:
 
 ```bash
-shellcheck -x -e SC1071 _setup.sh _setup/*.sh bin/*
+shellcheck -x -e SC1071 _setup.sh _setup/*.sh claude/*.sh bin/*
 ```
 
 `bin/clc` is Python rather than shell - it needs JSON, HTTPS, Unicode
