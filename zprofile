@@ -55,14 +55,6 @@ export CPPFLAGS="-I/opt/homebrew/opt/ffmpeg-full/include"
 # -----------------------
 # Secrets (login keychain)
 # -----------------------
-# Secrets stay in the macOS keychain, never in this repo. Add one with:
-#   security add-generic-password -a "$USER" -s <service> -w
-# and it prompts for the value instead of taking it on the command line, so the
-# secret never lands in shell history.
-#
-# An absent secret leaves the variable unset on purpose. Consumers that expand
-# ${VAR} - ~/.claude.json among them - substitute an empty string for a variable
-# that is set but empty, which fails far less visibly than an unset one.
 _export_secret() {
   local value
   value="$(security find-generic-password -a "$USER" -s "$2" -w 2>/dev/null)" || return 0
@@ -71,6 +63,10 @@ _export_secret() {
   fi
 }
 
+# to add a secret to the macOS keychain:
+# security add-generic-password -a "$USER" -s <service> -w
+
+# call, variable, service:
 _export_secret TEABLE_API_KEY teable-mcp-api-key
 
 # -----------------------
