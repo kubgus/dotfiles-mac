@@ -55,8 +55,8 @@ export CPPFLAGS="-I/opt/homebrew/opt/ffmpeg-full/include"
 # -----------------------
 # Disable sleep
 # -----------------------
-alias disablesleep="sudo pmset -a disablesleep 1"
-alias enablesleep="sudo pmset -a disablesleep 0"
+alias nosleep="sudo pmset -a disablesleep 1"
+alias yasleep="sudo pmset -a disablesleep 0"
 
 # -----------------------
 # Secure node aliases
