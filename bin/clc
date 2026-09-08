@@ -11,22 +11,29 @@ session transcripts - is symlinked back into ~/.claude, so it is one set of
 files whichever account is active. Only identity and machine state are per
 account.
 
+An account is named by its email and nothing else. The directory under
+~/.claude-accounts/ *is* the email, the list of accounts *is* what is in that
+directory, and the name shown in the picker is read live from the account's own
+.claude.json - so there is no second name to be kept in step. That path is what
+the Keychain item is keyed on, which is why `add` asks for the email up front
+rather than renaming afterwards: a rename would orphan the credentials. Change
+the email on an account later and everything keeps working; only the directory
+name goes stale, and it is a fallback that the live one overrides.
+
+~/.claude itself is the first account, so the login that was there before this
+script existed keeps working, and plain `claude` still uses it.
+
 Usage percentages come from the same endpoint the /usage command uses, but only
 when the account's stored access token is still valid; expired ones show the
 last figure seen, with its age. Refreshing a token would mean writing new
 credentials back to the Keychain, which this script deliberately does not do.
 
-Accounts identify themselves by the email they are signed in as, read from the
-account's own .claude.json. The id is only a handle - it names the directory,
-and because that path is what the Keychain item is keyed on, it must not move
-once the account is signed in.
-
-  clc [claude args...]   pick an account, then exec claude
-  clc list               print the accounts and their usage
-  clc add <id>           create an account and sign it in
-  clc rm <id>            forget an account
-  clc link               re-apply the shared symlinks
-  clc -- <args...>       pass args through even if they look like a verb
+  clc [claude args...]     pick an account, then exec claude
+  clc list                 print the accounts and their usage
+  clc add <email>          create an account and sign it in
+  clc rm <email>           sign an account out and delete it
+  clc link                 re-apply the shared symlinks
+  clc -- <args...>         pass args through even if they look like a verb
 """
 
 import hashlib
@@ -49,7 +56,6 @@ from datetime import datetime, timezone
 HOME = os.path.expanduser("~")
 SHARED_DIR = os.path.join(HOME, ".claude")
 ROOT = os.environ.get("CLAUDE_PICK_HOME") or os.path.join(HOME, ".claude-accounts")
-ACCOUNTS_FILE = os.path.join(ROOT, "accounts.json")
 STATE_DIR = os.path.join(ROOT, ".state")
 USAGE_CACHE = os.path.join(STATE_DIR, "usage.json")
 LAST_FILE = os.path.join(STATE_DIR, "last")
@@ -88,7 +94,9 @@ SHARED_CREATE = frozenset({"agents", "skills", "commands", "plugins", "projects"
 # actually exists on this machine rather than the file's name in the repo.
 PROG = os.path.basename(sys.argv[0]) or "clc"
 
-ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+# Permissive about what an address may contain, strict about what would let one
+# escape the accounts directory.
+EMAIL_RE = re.compile(r"^[^\s/@]+@[^\s/@]+\.[^\s/@]+$")
 KEYCHAIN_ACCOUNT_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
 
 VERBS = {"list", "ls", "add", "rm", "remove", "link", "help"}
@@ -132,14 +140,40 @@ def die(msg, code=1):
 
 
 # --------------------------------------------------------------------------
-# account store
+# accounts
 # --------------------------------------------------------------------------
 
 
 def account_dir(account):
     """Absolute CLAUDE_CONFIG_DIR, or None for the default ~/.claude account."""
-    raw = account.get("dir")
-    return os.path.abspath(os.path.expanduser(raw)) if raw else None
+    return account["dir"]
+
+
+def account_key(account):
+    """Stable key for cached state: the config dir, empty string for default.
+
+    Keyed on the path rather than the email because the path is what the
+    account actually is - the email can change under it.
+    """
+    return account_dir(account) or ""
+
+
+def discover_accounts():
+    """Every account there is: ~/.claude, then each directory under ROOT.
+
+    The filesystem is the list. There is no register to fall out of step with
+    what is actually on disk.
+    """
+    accounts = [{"dir": None}]
+    try:
+        names = sorted(os.listdir(ROOT))
+    except OSError:
+        names = []
+    for name in names:
+        path = os.path.join(ROOT, name)
+        if not name.startswith(".") and os.path.isdir(path):
+            accounts.append({"dir": path})
+    return accounts
 
 
 def read_json(path, fallback=None):
@@ -157,28 +191,6 @@ def write_json(path, data):
         json.dump(data, fh, indent=2)
         fh.write("\n")
     os.replace(tmp, path)
-
-
-def load_accounts():
-    """The account list, seeding a default entry on first run."""
-    data = read_json(ACCOUNTS_FILE)
-    if not isinstance(data, dict) or not isinstance(data.get("accounts"), list):
-        data = {"accounts": [{"id": "default", "dir": None}]}
-        write_json(ACCOUNTS_FILE, data)
-    for account in data["accounts"]:
-        account.pop("label", None)  # accounts used to carry a hand-written name
-    return data["accounts"]
-
-
-def save_accounts(accounts):
-    write_json(ACCOUNTS_FILE, {"accounts": accounts})
-
-
-def find_account(accounts, wanted):
-    for account in accounts:
-        if account["id"] == wanted:
-            return account
-    return None
 
 
 # --------------------------------------------------------------------------
@@ -282,7 +294,7 @@ def fetch_usage(config_dir):
 
 
 def collect_usage(accounts, refresh=True):
-    """Cached usage per account id, topped up with whatever can be fetched."""
+    """Cached usage per account, topped up with whatever can be fetched."""
     cache = read_json(USAGE_CACHE, {}) or {}
     if not refresh:
         return cache
@@ -293,7 +305,7 @@ def collect_usage(accounts, refresh=True):
     changed = False
     for account, fresh in zip(accounts, fetched):
         if fresh:
-            cache[account["id"]] = fresh
+            cache[account_key(account)] = fresh
             changed = True
     if changed:
         try:
@@ -309,7 +321,7 @@ def remember_usage(account):
     if not fresh:
         return
     cache = read_json(USAGE_CACHE, {}) or {}
-    cache[account["id"]] = fresh
+    cache[account_key(account)] = fresh
     try:
         write_json(USAGE_CACHE, cache)
     except OSError:
@@ -328,12 +340,12 @@ def config_json_path(config_dir):
 def identity(account):
     """Who an account belongs to, read straight out of its own .claude.json.
 
-    The email is the account's name in the picker; the org and plan are the
-    supporting detail beside it.
+    The email is the account's name; the org and plan are the supporting detail
+    beside it.
     """
     config_dir = account_dir(account)
     if config_dir is not None and not os.path.isdir(config_dir):
-        return {"state": "missing", "detail": "directory missing - run: %s link" % PROG}
+        return {"state": "missing", "detail": "directory missing"}
     if not signed_in(config_dir):
         return {"state": "logged-out", "detail": "not signed in"}
 
@@ -348,18 +360,48 @@ def identity(account):
 
 
 def display_name(account, ident):
-    """The email, falling back to the id while there is no profile to read."""
-    return ident.get("email") or account["id"]
+    """The live email, falling back to the directory it is stored in."""
+    config_dir = account_dir(account)
+    if config_dir is None:
+        return ident.get("email") or "~/.claude"
+    return ident.get("email") or os.path.basename(config_dir)
 
 
-def clip(text, width):
-    return text if len(text) <= width else text[: max(1, width - 1)] + "…"
+def build_rows(accounts, refresh=True):
+    with ThreadPoolExecutor(max_workers=max(1, len(accounts))) as pool:
+        identities = list(pool.map(identity, accounts))
+    cache = collect_usage(accounts, refresh=refresh)
+    return {
+        account_key(account): {
+            "identity": ident,
+            "name": display_name(account, ident),
+            "usage": cache.get(account_key(account)),
+        }
+        for account, ident in zip(accounts, identities)
+    }
+
+
+def resolve(accounts, rows, wanted):
+    """Find the account someone means by an email.
+
+    Matches the live email first and the directory name second, so an account
+    created before this script named directories by email is still reachable by
+    the address it actually belongs to.
+    """
+    wanted = wanted.strip().lower()
+    for account in accounts:
+        if rows[account_key(account)]["name"].lower() == wanted:
+            return account
+    for account in accounts:
+        config_dir = account_dir(account)
+        if config_dir and os.path.basename(config_dir).lower() == wanted:
+            return account
+    return None
 
 
 # --------------------------------------------------------------------------
 # formatting
 # --------------------------------------------------------------------------
-
 
 ANSI_RE = re.compile(r"\033\[[0-9;?]*[a-zA-Z]")
 
@@ -368,6 +410,10 @@ def pad(text, width):
     """Left-justify by *visible* width, so styled text still lines up."""
     visible = len(ANSI_RE.sub("", text))
     return text + " " * max(0, width - visible)
+
+
+def clip(text, width):
+    return text if len(text) <= width else text[: max(1, width - 1)] + "…"
 
 
 def bar(percent, width=12):
@@ -464,24 +510,22 @@ def render(out, accounts, rows, cursor):
     out.write("\033[H\033[2J")
     out.write("  %sClaude Code%s %s· pick an account%s\n\n" % (S.bold, S.reset, S.dim, S.reset))
 
-    # Emails vary in length far more than hand-written names did, so size the
-    # column to whatever is actually there rather than to a fixed guess.
-    names = {a["id"]: display_name(a, rows[a["id"]]["identity"]) for a in accounts}
-    name_width = min(34, max(14, max(len(n) for n in names.values())))
+    # Emails vary in length, so size the column to what is actually there.
+    name_width = min(34, max(14, max(len(rows[account_key(a)]["name"]) for a in accounts)))
 
     for index, account in enumerate(accounts):
-        row = rows[account["id"]]
+        row = rows[account_key(account)]
         selected = index == cursor
         marker = "%s▸%s" % (S.accent, S.reset) if selected else " "
-        name = pad(clip(names[account["id"]], name_width), name_width)
+        name = pad(clip(row["name"], name_width), name_width)
         if selected:
             name = "%s%s%s" % (S.bold, name, S.reset)
-        detail = row["identity"].get("detail", "")
         room = max(0, width - name_width - 9)
-        out.write("  %s %s  %s%s%s\n" % (marker, name, S.dim, clip(detail, room), S.reset))
+        detail = clip(row["identity"].get("detail", ""), room)
+        out.write("  %s %s  %s%s%s\n" % (marker, name, S.dim, detail, S.reset))
         out.write("      %s\n\n" % usage_line(row["usage"]))
 
-    out.write("  %s%s%s\n\n" % (S.dim, detail_line(rows[accounts[cursor]["id"]]), S.reset))
+    out.write("  %s%s%s\n\n" % (S.dim, detail_line(rows[account_key(accounts[cursor])]), S.reset))
     out.write(
         "  %s↑↓ move · enter launch · s sign in · r refresh · q quit%s\n"
         % (S.dim, S.reset)
@@ -516,7 +560,7 @@ def pick(accounts, rows, start):
                 try:
                     cache = collect_usage(accounts)
                     for account in accounts:
-                        rows[account["id"]]["usage"] = cache.get(account["id"])
+                        rows[account_key(account)]["usage"] = cache.get(account_key(account))
                 finally:
                     tty.setcbreak(fd)
             elif key == "s":
@@ -557,6 +601,23 @@ def link_shared(config_dir, report=True):
         os.symlink(source, dest)
         if report:
             print("Creating symlink %s -> %s" % (dest, source))
+
+
+def remove_account_dir(config_dir):
+    """Delete an account directory without ever following a shared symlink.
+
+    rmtree would not follow them either, but the shared entries point straight
+    at ~/.claude, so this unlinks them explicitly rather than relying on that.
+    """
+    for name in os.listdir(config_dir):
+        entry = os.path.join(config_dir, name)
+        if os.path.islink(entry):
+            os.unlink(entry)
+        elif os.path.isdir(entry):
+            shutil.rmtree(entry)
+        else:
+            os.remove(entry)
+    os.rmdir(config_dir)
 
 
 # Copied into a new account's .claude.json only to skip onboarding and the
@@ -607,24 +668,24 @@ def claude_binary():
     die("claude is not on PATH")
 
 
-def account_env(account):
+def account_env(account, name):
     env = dict(os.environ)
     env.pop("CLAUDE_CONFIG_DIR", None)
     config_dir = account_dir(account)
     if config_dir:
         env["CLAUDE_CONFIG_DIR"] = config_dir
     # Handy for statuslines and hooks that want to show which account is live.
-    env["CLAUDE_PICK_ACCOUNT"] = account["id"]
+    env["CLAUDE_PICK_ACCOUNT"] = name
     return env
 
 
-def run_as(account, args):
+def run_as(account, name, args):
     """Run a command as an account and return its exit code.
 
     Ctrl-C belongs to the child: the parent just keeps waiting rather than
     tearing the session down from underneath it.
     """
-    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account))
+    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account, name))
     while True:
         try:
             return proc.wait()
@@ -632,13 +693,14 @@ def run_as(account, args):
             continue
 
 
-def launch(account, args):
+def launch(account, name, args):
     try:
+        os.makedirs(STATE_DIR, exist_ok=True)
         with open(LAST_FILE, "w", encoding="utf-8") as fh:
-            fh.write(account["id"])
+            fh.write(account_key(account))
     except OSError:
         pass
-    code = run_as(account, args)
+    code = run_as(account, name, args)
     # The token was just refreshed by the session, so this reading is free.
     try:
         remember_usage(account)
@@ -647,12 +709,16 @@ def launch(account, args):
     return code
 
 
-def sign_in(account):
+def sign_in(account, name):
     config_dir = account_dir(account)
     if config_dir:
         link_shared(config_dir, report=False)
         seed_config(config_dir)
-    return run_as(account, ["auth", "login"])
+    return run_as(account, name, ["auth", "login"])
+
+
+def sign_out(account, name):
+    return run_as(account, name, ["auth", "logout"])
 
 
 # --------------------------------------------------------------------------
@@ -660,59 +726,75 @@ def sign_in(account):
 # --------------------------------------------------------------------------
 
 
-def build_rows(accounts, refresh=True):
-    with ThreadPoolExecutor(max_workers=max(1, len(accounts))) as pool:
-        identities = list(pool.map(identity, accounts))
-    cache = collect_usage(accounts, refresh=refresh)
-    return {
-        account["id"]: {"identity": ident, "usage": cache.get(account["id"])}
-        for account, ident in zip(accounts, identities)
-    }
-
-
 def cmd_list(accounts):
     rows = build_rows(accounts)
     for account in accounts:
-        row = rows[account["id"]]
-        name = display_name(account, row["identity"])
-        print("  %-12s %-30s %s" % (account["id"], name, row["identity"].get("detail", "")))
+        row = rows[account_key(account)]
+        where = (account_dir(account) or SHARED_DIR).replace(HOME, "~")
+        detail = " · ".join(b for b in (row["identity"].get("detail"), where) if b)
+        print("  %-32s %s%s%s" % (row["name"], S.dim, detail, S.reset))
         print("      %s" % usage_line(row["usage"]))
     return 0
 
 
-def cmd_add(accounts, argv):
+def cmd_add(argv):
     if len(argv) != 1:
-        die("usage: %s add <id>   (the id names the directory; the picker "
-            "shows the email you sign in as)" % PROG)
-    new_id = argv[0]
-    if not ID_RE.match(new_id):
-        die("id must be lowercase letters, digits, dot, dash or underscore")
-    if find_account(accounts, new_id):
-        die("account %r already exists" % new_id)
+        die("usage: %s add <email>   (the address becomes the directory, so it "
+            "has to be known before signing in)" % PROG)
+    email = argv[0].strip()
+    if not EMAIL_RE.match(email) or email.startswith("."):
+        die("that does not look like an email address: %r" % argv[0])
 
-    config_dir = os.path.join(ROOT, new_id)
+    config_dir = os.path.join(ROOT, email)
+    if os.path.exists(config_dir):
+        die("%s is already an account - run: %s list" % (email, PROG))
+
     link_shared(config_dir)
     seed_config(config_dir)
-    account = {"id": new_id, "dir": config_dir}
-    accounts.append(account)
-    save_accounts(accounts)
-    print("\nAdded %s. Signing in...\n" % config_dir)
-    return sign_in(account)
+    account = {"dir": config_dir}
+    print("\nAdded %s. Signing in...\n" % config_dir.replace(HOME, "~"))
+    code = sign_in(account, email)
+
+    # The directory name is a claim about who signed in; check it held.
+    actual = identity(account).get("email")
+    if actual and actual.lower() != email.lower():
+        print(
+            "\n%s: signed in as %s, but the directory says %s. Everything works "
+            "- the picker shows the real address - but the two disagree. To fix "
+            "it: %s rm %s, then %s add %s\n"
+            % (PROG, actual, email, PROG, email, PROG, actual),
+            file=sys.stderr,
+        )
+    return code
 
 
 def cmd_rm(accounts, argv):
-    if not argv:
-        die("usage: %s rm <id>" % PROG)
-    account = find_account(accounts, argv[0])
+    if len(argv) != 1:
+        die("usage: %s rm <email>" % PROG)
+    rows = build_rows(accounts, refresh=False)
+    account = resolve(accounts, rows, argv[0])
     if not account:
-        die("no account %r" % argv[0])
-    if account_dir(account) is None:
-        die("the default account cannot be removed")
-    accounts.remove(account)
-    save_accounts(accounts)
-    print("Forgotten. Its directory is left alone - delete it yourself:")
-    print("  claude auth logout   # while CLAUDE_CONFIG_DIR points at it")
-    print("  rm -rf %s" % account_dir(account))
+        die("no account for %r - run: %s list" % (argv[0], PROG))
+    config_dir = account_dir(account)
+    if config_dir is None:
+        die("~/.claude is the account Claude Code uses on its own; sign it out "
+            "with `claude auth logout` if you mean to")
+
+    name = rows[account_key(account)]["name"]
+    print("This signs %s out and deletes %s." % (name, config_dir.replace(HOME, "~")))
+    print("Shared files are symlinks and are left alone; sessions and settings "
+          "for this account are not.")
+    if not sys.stdin.isatty():
+        die("refusing to delete without a terminal to confirm at")
+    if input("Type the address to confirm: ").strip().lower() != name.lower():
+        die("not confirmed, nothing removed")
+
+    # Logging out is what releases the Keychain item; deleting the directory on
+    # its own would leave the credentials behind with nothing pointing at them.
+    if rows[account_key(account)]["identity"]["state"] == "ok":
+        sign_out(account, name)
+    remove_account_dir(config_dir)
+    print("Removed %s." % name)
     return 0
 
 
@@ -725,8 +807,7 @@ def cmd_link(accounts):
 
 
 def main(argv):
-    os.makedirs(STATE_DIR, exist_ok=True)
-    accounts = load_accounts()
+    accounts = discover_accounts()
 
     if argv and argv[0] == "--":
         argv = argv[1:]
@@ -735,7 +816,7 @@ def main(argv):
         if verb in ("list", "ls"):
             return cmd_list(accounts)
         if verb == "add":
-            return cmd_add(accounts, rest)
+            return cmd_add(rest)
         if verb in ("rm", "remove"):
             return cmd_rm(accounts, rest)
         if verb == "link":
@@ -747,7 +828,7 @@ def main(argv):
         return 0
 
     if len(accounts) == 1:
-        return launch(accounts[0], argv)
+        return launch(accounts[0], display_name(accounts[0], identity(accounts[0])), argv)
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
         die("no terminal to draw the picker in; try: %s list" % PROG)
 
@@ -756,14 +837,17 @@ def main(argv):
             last = fh.read().strip()
     except OSError:
         last = None
-    start = next((i for i, a in enumerate(accounts) if a["id"] == last), 0)
+    start = next((i for i, a in enumerate(accounts) if account_key(a) == last), 0)
 
-    choice = pick(accounts, build_rows(accounts), start)
+    rows = build_rows(accounts)
+    choice = pick(accounts, rows, start)
     if choice is None:
         return 130
     if isinstance(choice, tuple):
-        return sign_in(accounts[choice[1]])
-    return launch(accounts[choice], argv)
+        account = accounts[choice[1]]
+        return sign_in(account, rows[account_key(account)]["name"])
+    account = accounts[choice]
+    return launch(account, rows[account_key(account)]["name"], argv)
 
 
 if __name__ == "__main__":

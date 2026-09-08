@@ -63,12 +63,15 @@ out, no credential shuffling, and the script only ever reads the Keychain.
 Everything portable is symlinked from each account directory back into
 `~/.claude`, so `CLAUDE.md`, agents, skills, commands, plugins, settings and
 session transcripts are the same files whichever account is live; only identity
-and machine state are per account. Accounts name themselves by the email they
-are signed in as; the id you pass to `clc add work` is only a handle, and
-because it names the directory the Keychain item is keyed on, it must not move
-once that account is signed in. `clc link` re-applies the symlinks after adding
-a new shared directory. The accounts themselves are machine-local and
-untracked - this repo holds the command, not the logins.
+and machine state are per account. An account is named by its email and nothing
+else: the directory under `~/.claude-accounts/` *is* the address, the account
+list *is* what is in that directory, and the name on screen is read live from
+the account's own `.claude.json`, so there is no second name to keep in step.
+`clc add kubo@example.com` creates one and signs it in - the address has to be
+known up front, because renaming the directory afterwards would orphan the
+credentials keyed on it. `clc link` re-applies the symlinks after adding a new
+shared directory. The accounts themselves are machine-local and untracked -
+this repo holds the command, not the logins.
 
 **The notification sounds have an off switch outside the repo.** Two hooks
 chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
