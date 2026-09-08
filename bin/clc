@@ -448,6 +448,28 @@ def clip(text, width):
     return text if len(text) <= width else text[: max(1, width - 1)] + "…"
 
 
+def fit(text, width):
+    """Truncate to a visible width without cutting an escape sequence in half.
+
+    A line that wraps would throw off how far the picker has to move the cursor
+    back up to redraw, so every line is made to fit first.
+    """
+    if len(ANSI_RE.sub("", text)) <= width:
+        return text
+    kept, shown, i = [], 0, 0
+    while i < len(text) and shown < width:
+        match = ANSI_RE.match(text, i)
+        if match:
+            kept.append(match.group())
+            i = match.end()
+        else:
+            kept.append(text[i])
+            shown += 1
+            i += 1
+    kept.append(S.reset)
+    return "".join(kept)
+
+
 def bar(percent, width=12):
     filled = max(0, min(width, int(round(percent / 100.0 * width))))
     if percent >= 85:
@@ -537,32 +559,82 @@ def read_key(stream):
     return {"[A": "up", "[B": "down", "[C": "right", "[D": "left"}.get(rest, "esc")
 
 
-def render(out, accounts, rows, cursor):
-    width = shutil.get_terminal_size((100, 24)).columns
-    out.write("\033[H\033[2J")
-    out.write("  %sClaude Code%s %s· pick an account%s\n\n" % (S.bold, S.reset, S.dim, S.reset))
+CHROME_LINES = 5  # header + blank, then the detail line, a blank and the keys
+ACCOUNT_LINES = 3  # name, usage, blank
+
+
+def render_lines(accounts, rows, cursor, width, height):
+    """The picker as a list of lines, sized to fit the terminal it is drawn in.
+
+    Windowed rather than truncated when the list is taller than the terminal,
+    and the header says so, because quietly hiding an account would read as not
+    having one.
+    """
+    room = max(1, (height - 1 - CHROME_LINES) // ACCOUNT_LINES)
+    if room >= len(accounts):
+        first, shown = 0, len(accounts)
+    else:
+        shown = room
+        first = min(max(cursor - room // 2, 0), len(accounts) - room)
+    visible = accounts[first:first + shown]
+
+    counted = "" if shown == len(accounts) else " (%d of %d)" % (shown, len(accounts))
+    lines = ["  %sClaude Code%s %s· pick an account%s%s" % (S.bold, S.reset, S.dim, counted or "", S.reset), ""]
 
     # Emails vary in length, so size the column to what is actually there.
-    name_width = min(34, max(14, max(len(rows[account_key(a)]["name"]) for a in accounts)))
+    name_width = min(34, max(14, max(len(rows[account_key(a)]["name"]) for a in visible)))
 
-    for index, account in enumerate(accounts):
+    for account in visible:
         row = rows[account_key(account)]
-        selected = index == cursor
+        selected = account is accounts[cursor]
         marker = "%s▸%s" % (S.accent, S.reset) if selected else " "
         name = pad(clip(row["name"], name_width), name_width)
         if selected:
             name = "%s%s%s" % (S.bold, name, S.reset)
-        room = max(0, width - name_width - 9)
-        detail = clip(row["identity"].get("detail", ""), room)
-        out.write("  %s %s  %s%s%s\n" % (marker, name, S.dim, detail, S.reset))
-        out.write("      %s\n\n" % usage_line(row["usage"]))
+        spare = max(0, width - name_width - 9)
+        detail = clip(row["identity"].get("detail", ""), spare)
+        lines.append("  %s %s  %s%s%s" % (marker, name, S.dim, detail, S.reset))
+        lines.append("      %s" % usage_line(row["usage"]))
+        lines.append("")
 
-    out.write("  %s%s%s\n\n" % (S.dim, detail_line(rows[account_key(accounts[cursor])]), S.reset))
-    out.write(
-        "  %s↑↓ move · enter launch · s sign in · r refresh · q quit%s\n"
-        % (S.dim, S.reset)
-    )
-    out.flush()
+    lines.append("  %s%s%s" % (S.dim, detail_line(rows[account_key(accounts[cursor])]), S.reset))
+    lines.append("")
+    lines.append("  %s↑↓ move · enter launch · s sign in · r refresh · q quit%s" % (S.dim, S.reset))
+    return [fit(line, width) for line in lines]
+
+
+class Inline:
+    """Draws a block where the cursor already is, and takes it back afterwards.
+
+    The alternate screen would blank the terminal for as long as the picker is
+    up; this leaves whatever was on screen above it alone.
+    """
+
+    def __init__(self, out):
+        self.out = out
+        self.height = 0
+
+    def draw(self, lines):
+        out = self.out
+        if self.height:
+            out.write("\033[%dA" % self.height)
+        out.write("\r")
+        for line in lines:
+            out.write("\033[2K%s\n" % line)
+        # A shorter block than last time leaves a tail behind; wipe it.
+        leftover = self.height - len(lines)
+        for _ in range(max(0, leftover)):
+            out.write("\033[2K\n")
+        if leftover > 0:
+            out.write("\033[%dA" % leftover)
+        self.height = len(lines)
+        out.flush()
+
+    def erase(self):
+        if self.height:
+            self.out.write("\033[%dA\r\033[J" % self.height)
+            self.out.flush()
+            self.height = 0
 
 
 def pick(accounts, rows, start):
@@ -571,13 +643,15 @@ def pick(accounts, rows, start):
     saved = termios.tcgetattr(fd)
     out = sys.stdout
     cursor = start
-    out.write("\033[?1049h\033[?25l")
+    block = Inline(out)
+    out.write("\033[?25l")
     try:
         # cbreak, not raw: raw would also switch off output post-processing, and
         # every line after the first would stair-step across the screen.
         tty.setcbreak(fd)
         while True:
-            render(out, accounts, rows, cursor)
+            size = shutil.get_terminal_size((100, 24))
+            block.draw(render_lines(accounts, rows, cursor, size.columns, size.lines))
             key = read_key(sys.stdin)
             if key in ("q", "\x03", "\x04", "esc"):
                 return None
@@ -588,20 +662,20 @@ def pick(accounts, rows, start):
             elif key in ("\r", "\n"):
                 return cursor
             elif key == "r":
-                termios.tcsetattr(fd, termios.TCSADRAIN, saved)
-                try:
-                    cache = collect_usage(accounts)
-                    for account in accounts:
-                        rows[account_key(account)]["usage"] = cache.get(account_key(account))
-                finally:
-                    tty.setcbreak(fd)
+                # Stays in cbreak throughout: the fetch never reads stdin, and
+                # restoring echo would let a keystroke land in the middle of the
+                # block and throw the redraw off.
+                cache = collect_usage(accounts)
+                for account in accounts:
+                    rows[account_key(account)]["usage"] = cache.get(account_key(account))
             elif key == "s":
                 return ("sign-in", cursor)
             elif key.isdigit() and key != "0" and int(key) <= len(accounts):
                 return int(key) - 1
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
-        out.write("\033[?25h\033[?1049l")
+        block.erase()
+        out.write("\033[?25h")
         out.flush()
 
 
