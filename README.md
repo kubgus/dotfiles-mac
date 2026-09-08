@@ -56,6 +56,18 @@ so anything not whitelisted still works locally, it just isn't tracked.
 session state, telemetry and caches. Only the portable files are tracked;
 `auth.json`, `sessions/` and `npm/` stay machine-local.
 
+**`claude-pick` switches Claude Code accounts by moving `CLAUDE_CONFIG_DIR`.**
+Claude Code derives its Keychain item from a hash of that path, so pointing the
+variable at `~/.claude-accounts/<id>` is the entire account switch - no logging
+out, no credential shuffling, and the script only ever reads the Keychain.
+Everything portable is symlinked from each account directory back into
+`~/.claude`, so `CLAUDE.md`, agents, skills, commands, plugins, settings and
+session transcripts are the same files whichever account is live; only identity
+and machine state are per account. `claude-pick add work` creates one and signs
+it in, `claude-pick link` re-applies the symlinks after adding a new shared
+directory. The accounts themselves are machine-local and untracked - this repo
+holds the command, not the logins.
+
 **The notification sounds have an off switch outside the repo.** Two hooks
 chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
 ends. They sit in different frequency registers so they stay apart over music.
@@ -78,8 +90,13 @@ Shell scripts here should be `shellcheck`-clean, and start with
 `set -euo pipefail` unless there is a reason not to. Check them with:
 
 ```bash
-shellcheck -x _setup.sh _setup/*.sh bin/*
+shellcheck -x -e SC1071 _setup.sh _setup/*.sh bin/*
 ```
+
+`bin/claude-pick` is Python rather than shell - it needs JSON, HTTPS, Unicode
+normalisation and a handful of concurrent requests, which is more than shell
+should be asked to carry. `-e SC1071` is what stops `shellcheck` complaining
+about its shebang.
 
 ## Keeping this current
 

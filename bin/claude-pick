@@ -1,0 +1,752 @@
+#!/usr/bin/env python3
+"""claude-pick - choose which Claude Code account to run as, then launch it.
+
+An account is nothing but a CLAUDE_CONFIG_DIR. Claude Code derives its Keychain
+item name from a hash of that path, so pointing the env var somewhere else is
+the whole of the account switch: separate credentials, separate identity, no
+logging out and back in. This script only ever *reads* the Keychain.
+
+Everything portable - CLAUDE.md, agents, skills, commands, plugins, settings,
+session transcripts - is symlinked back into ~/.claude, so it is one set of
+files whichever account is active. Only identity and machine state are per
+account.
+
+Usage percentages come from the same endpoint the /usage command uses, but only
+when the account's stored access token is still valid; expired ones show the
+last figure seen, with its age. Refreshing a token would mean writing new
+credentials back to the Keychain, which this script deliberately does not do.
+
+  claude-pick [claude args...]   pick an account, then exec claude
+  claude-pick list               print the accounts and their usage
+  claude-pick add <id> [label]   create an account and sign it in
+  claude-pick rm <id>            forget an account
+  claude-pick label <id> <text>  rename one in the picker
+  claude-pick link               re-apply the shared symlinks
+  claude-pick -- <args...>       pass args through even if they look like a verb
+"""
+
+import hashlib
+import json
+import os
+import re
+import select
+import shutil
+import subprocess
+import sys
+import termios
+import time
+import tty
+import unicodedata
+import urllib.error
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+
+HOME = os.path.expanduser("~")
+SHARED_DIR = os.path.join(HOME, ".claude")
+ROOT = os.environ.get("CLAUDE_PICK_HOME") or os.path.join(HOME, ".claude-accounts")
+ACCOUNTS_FILE = os.path.join(ROOT, "accounts.json")
+STATE_DIR = os.path.join(ROOT, ".state")
+USAGE_CACHE = os.path.join(STATE_DIR, "usage.json")
+LAST_FILE = os.path.join(STATE_DIR, "last")
+
+USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
+OAUTH_BETA = "oauth-2025-04-20"
+FETCH_TIMEOUT = 6.0
+LIVE_WINDOW = 120  # a reading younger than this reads as "live"
+SKEW = 60  # treat a token expiring within a minute as already expired
+
+# Linked from each account directory back into ~/.claude. Order is cosmetic.
+SHARED_ENTRIES = (
+    "CLAUDE.md",
+    "settings.json",
+    "settings.local.json",
+    "keybindings.json",
+    "history.jsonl",
+    "agents",
+    "skills",
+    "commands",
+    "output-styles",
+    "workflows",
+    "hooks",
+    "plugins",
+    "projects",
+    "todos",
+    "plans",
+)
+# Created in ~/.claude if absent, so a fresh account still shares them.
+SHARED_CREATE = frozenset({"agents", "skills", "commands", "plugins", "projects"})
+
+# Everything else - .claude.json, sessions/, ide/, telemetry/, shell-snapshots/,
+# session-env/, cache/ - stays real and per account. That is the point.
+
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+KEYCHAIN_ACCOUNT_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
+
+VERBS = {"list", "ls", "add", "rm", "remove", "label", "link", "help"}
+
+
+# --------------------------------------------------------------------------
+# terminal
+# --------------------------------------------------------------------------
+
+
+class Style:
+    """ANSI codes, or empty strings when colour is not wanted."""
+
+    def __init__(self, enabled):
+        def code(seq):
+            return seq if enabled else ""
+
+        self.reset = code("\033[0m")
+        self.bold = code("\033[1m")
+        self.dim = code("\033[2m")
+        self.accent = code("\033[36m")
+        self.green = code("\033[32m")
+        self.yellow = code("\033[33m")
+        self.red = code("\033[31m")
+
+
+def colour_wanted():
+    return (
+        sys.stdout.isatty()
+        and "NO_COLOR" not in os.environ
+        and os.environ.get("TERM", "") != "dumb"
+    )
+
+
+S = Style(colour_wanted())
+
+
+def die(msg, code=1):
+    sys.stderr.write("claude-pick: %s\n" % msg)
+    raise SystemExit(code)
+
+
+# --------------------------------------------------------------------------
+# account store
+# --------------------------------------------------------------------------
+
+
+def account_dir(account):
+    """Absolute CLAUDE_CONFIG_DIR, or None for the default ~/.claude account."""
+    raw = account.get("dir")
+    return os.path.abspath(os.path.expanduser(raw)) if raw else None
+
+
+def read_json(path, fallback=None):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return fallback
+
+
+def write_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2)
+        fh.write("\n")
+    os.replace(tmp, path)
+
+
+def load_accounts():
+    """The account list, seeding a default entry on first run."""
+    data = read_json(ACCOUNTS_FILE)
+    if not isinstance(data, dict) or not isinstance(data.get("accounts"), list):
+        data = {"accounts": [{"id": "default", "label": "Default", "dir": None}]}
+        write_json(ACCOUNTS_FILE, data)
+    return data["accounts"]
+
+
+def save_accounts(accounts):
+    write_json(ACCOUNTS_FILE, {"accounts": accounts})
+
+
+def find_account(accounts, wanted):
+    for account in accounts:
+        if account["id"] == wanted:
+            return account
+    return None
+
+
+# --------------------------------------------------------------------------
+# credentials (read only)
+# --------------------------------------------------------------------------
+
+
+def keychain_service(config_dir):
+    """The Keychain service name Claude Code uses for a given config dir.
+
+    Mirrors the CLI: "Claude Code-credentials", suffixed with the first eight
+    hex digits of sha256(NFC(CLAUDE_CONFIG_DIR)) whenever the env var is set.
+    """
+    base = "Claude Code-credentials"
+    if config_dir is None:
+        return base
+    normalised = unicodedata.normalize("NFC", config_dir)
+    digest = hashlib.sha256(normalised.encode("utf-8")).hexdigest()[:8]
+    return "%s-%s" % (base, digest)
+
+
+def keychain_account():
+    name = os.environ.get("USER") or ""
+    return name if KEYCHAIN_ACCOUNT_RE.match(name) else "claude-code-user"
+
+
+def read_token(config_dir):
+    """(access_token, expires_at_seconds) from the Keychain, or (None, None).
+
+    The token is returned for an immediate HTTPS call and never cached, logged
+    or written anywhere.
+    """
+    cmd = [
+        "security",
+        "find-generic-password",
+        "-a",
+        keychain_account(),
+        "-w",
+        "-s",
+        keychain_service(config_dir),
+    ]
+    try:
+        proc = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+    if proc.returncode != 0 or not proc.stdout:
+        return None, None
+    try:
+        oauth = json.loads(proc.stdout.decode("utf-8").strip())["claudeAiOauth"]
+        return oauth.get("accessToken"), (oauth.get("expiresAt") or 0) / 1000.0
+    except (ValueError, KeyError, AttributeError, TypeError):
+        return None, None
+
+
+def signed_in(config_dir):
+    token, _ = read_token(config_dir)
+    return token is not None
+
+
+# --------------------------------------------------------------------------
+# usage
+# --------------------------------------------------------------------------
+
+
+def fetch_usage(config_dir):
+    """Live usage for one account, or None when its token has expired.
+
+    Deliberately gives up rather than refreshing: a refresh rotates the stored
+    credentials, and this script does not write to the Keychain.
+    """
+    token, expires_at = read_token(config_dir)
+    if not token or not expires_at or expires_at - SKEW <= time.time():
+        return None
+    request = urllib.request.Request(
+        USAGE_URL,
+        headers={
+            "Authorization": "Bearer %s" % token,
+            "anthropic-beta": OAUTH_BETA,
+            "Content-Type": "application/json",
+            "User-Agent": "claude-pick",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+
+    def slice_of(key):
+        block = payload.get(key)
+        if not isinstance(block, dict) or block.get("utilization") is None:
+            return None
+        return {
+            "percent": float(block["utilization"]),
+            "resets_at": block.get("resets_at"),
+        }
+
+    return {"at": time.time(), "five_hour": slice_of("five_hour"), "seven_day": slice_of("seven_day")}
+
+
+def collect_usage(accounts, refresh=True):
+    """Cached usage per account id, topped up with whatever can be fetched."""
+    cache = read_json(USAGE_CACHE, {}) or {}
+    if not refresh:
+        return cache
+
+    with ThreadPoolExecutor(max_workers=max(1, len(accounts))) as pool:
+        fetched = list(pool.map(lambda a: fetch_usage(account_dir(a)), accounts))
+
+    changed = False
+    for account, fresh in zip(accounts, fetched):
+        if fresh:
+            cache[account["id"]] = fresh
+            changed = True
+    if changed:
+        try:
+            write_json(USAGE_CACHE, cache)
+        except OSError:
+            pass
+    return cache
+
+
+def remember_usage(account):
+    """Cache one account's usage. Called after a session, when the token is new."""
+    fresh = fetch_usage(account_dir(account))
+    if not fresh:
+        return
+    cache = read_json(USAGE_CACHE, {}) or {}
+    cache[account["id"]] = fresh
+    try:
+        write_json(USAGE_CACHE, cache)
+    except OSError:
+        pass
+
+
+# --------------------------------------------------------------------------
+# identity
+# --------------------------------------------------------------------------
+
+
+def config_json_path(config_dir):
+    return os.path.join(config_dir or HOME, ".claude.json")
+
+
+def identity(account):
+    """Who an account belongs to, read straight out of its own .claude.json."""
+    config_dir = account_dir(account)
+    if config_dir is not None and not os.path.isdir(config_dir):
+        return {"state": "missing"}
+    if not signed_in(config_dir):
+        return {"state": "logged-out"}
+    oauth = (read_json(config_json_path(config_dir), {}) or {}).get("oauthAccount") or {}
+    parts = [oauth.get("emailAddress"), oauth.get("organizationName")]
+    plan = oauth.get("subscriptionType") or oauth.get("seatTier")
+    if plan:
+        parts.append(str(plan).replace("_", " "))
+    return {"state": "ok", "who": " · ".join(p for p in parts if p) or "signed in"}
+
+
+# --------------------------------------------------------------------------
+# formatting
+# --------------------------------------------------------------------------
+
+
+ANSI_RE = re.compile(r"\033\[[0-9;?]*[a-zA-Z]")
+
+
+def pad(text, width):
+    """Left-justify by *visible* width, so styled text still lines up."""
+    visible = len(ANSI_RE.sub("", text))
+    return text + " " * max(0, width - visible)
+
+
+def bar(percent, width=12):
+    filled = max(0, min(width, int(round(percent / 100.0 * width))))
+    if percent >= 85:
+        colour = S.red
+    elif percent >= 60:
+        colour = S.yellow
+    else:
+        colour = S.green
+    return "%s%s%s%s%s" % (colour, "█" * filled, S.dim, "░" * (width - filled), S.reset)
+
+
+def gauge(label, slice_):
+    """A fixed 20-column "5h ████░░░░ 35%" cell, blank when there is no reading."""
+    if not slice_:
+        return "%s%s %s    -%s" % (S.dim, label, " " * 12, S.reset)
+    return "%s%s%s %s %3d%%" % (S.dim, label, S.reset, bar(slice_["percent"]), round(slice_["percent"]))
+
+
+def ago(seconds):
+    seconds = int(max(0, seconds))
+    if seconds < 60:
+        return "%ds" % seconds
+    if seconds < 3600:
+        return "%dm" % (seconds // 60)
+    if seconds < 86400:
+        return "%dh" % (seconds // 3600)
+    return "%dd" % (seconds // 86400)
+
+
+def until(iso):
+    if not iso:
+        return None
+    try:
+        when = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return ago((when - datetime.now(timezone.utc)).total_seconds())
+
+
+def freshness(entry):
+    if not entry:
+        return "no reading yet"
+    age = time.time() - entry.get("at", 0)
+    return "live" if age < LIVE_WINDOW else "%s ago" % ago(age)
+
+
+def usage_line(entry):
+    entry = entry or {}
+    five = gauge("5h", entry.get("five_hour"))
+    week = gauge("wk", entry.get("seven_day"))
+    return "%s   %s   %s%s%s" % (five, week, S.dim, freshness(entry), S.reset)
+
+
+def detail_line(entry):
+    """The resets-in hint shown under the highlighted account."""
+    if not entry:
+        return "no usage reading - sign in, or run a session to record one"
+    bits = []
+    for label, key in (("5h", "five_hour"), ("week", "seven_day")):
+        slice_ = entry.get(key)
+        left = until(slice_["resets_at"]) if slice_ else None
+        if left:
+            bits.append("%s resets in %s" % (label, left))
+    return " · ".join(bits) if bits else "no reset window reported"
+
+
+# --------------------------------------------------------------------------
+# picker
+# --------------------------------------------------------------------------
+
+
+def read_key(stream):
+    first = stream.read(1)
+    if first != "\x1b":
+        return first
+    # A bare Escape is just ESC; an arrow key is ESC [ A. Peek rather than read,
+    # so pressing Escape does not hang waiting for two bytes that never come.
+    if not select.select([stream], [], [], 0.05)[0]:
+        return "esc"
+    rest = stream.read(2)
+    return {"[A": "up", "[B": "down", "[C": "right", "[D": "left"}.get(rest, "esc")
+
+
+def render(out, accounts, rows, cursor):
+    width = shutil.get_terminal_size((100, 24)).columns
+    out.write("\033[H\033[2J")
+    out.write("  %sClaude Code%s %s· pick an account%s\n\n" % (S.bold, S.reset, S.dim, S.reset))
+
+    for index, account in enumerate(accounts):
+        row = rows[account["id"]]
+        selected = index == cursor
+        marker = "%s▸%s" % (S.accent, S.reset) if selected else " "
+        name = pad(account.get("label") or account["id"], 22)
+        if selected:
+            name = "%s%s%s" % (S.bold, name, S.reset)
+        who = row["identity"].get("who") or {
+            "missing": "directory missing - run: claude-pick link",
+            "logged-out": "not signed in - press s",
+        }.get(row["identity"]["state"], "")
+        out.write("  %s %s %s%s%s\n" % (marker, name, S.dim, who[: max(0, width - 30)], S.reset))
+        out.write("      %s\n\n" % usage_line(row["usage"]))
+
+    selected_row = rows[accounts[cursor]["id"]]
+    out.write("  %s%s%s\n\n" % (S.dim, detail_line(selected_row["usage"]), S.reset))
+    out.write(
+        "  %s↑↓ move · enter launch · s sign in · r refresh · q quit%s\n"
+        % (S.dim, S.reset)
+    )
+    out.flush()
+
+
+def pick(accounts, rows, start):
+    """Draw the picker and return the chosen index, or None if cancelled."""
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    out = sys.stdout
+    cursor = start
+    out.write("\033[?1049h\033[?25l")
+    try:
+        # cbreak, not raw: raw would also switch off output post-processing, and
+        # every line after the first would stair-step across the screen.
+        tty.setcbreak(fd)
+        while True:
+            render(out, accounts, rows, cursor)
+            key = read_key(sys.stdin)
+            if key in ("q", "\x03", "\x04", "esc"):
+                return None
+            if key in ("up", "k"):
+                cursor = (cursor - 1) % len(accounts)
+            elif key in ("down", "j"):
+                cursor = (cursor + 1) % len(accounts)
+            elif key in ("\r", "\n"):
+                return cursor
+            elif key == "r":
+                termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+                try:
+                    cache = collect_usage(accounts)
+                    for account in accounts:
+                        rows[account["id"]]["usage"] = cache.get(account["id"])
+                finally:
+                    tty.setcbreak(fd)
+            elif key == "s":
+                return ("sign-in", cursor)
+            elif key.isdigit() and key != "0" and int(key) <= len(accounts):
+                return int(key) - 1
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+        out.write("\033[?25h\033[?1049l")
+        out.flush()
+
+
+# --------------------------------------------------------------------------
+# shared symlinks
+# --------------------------------------------------------------------------
+
+
+def link_shared(config_dir, report=True):
+    """Point an account directory's portable entries back at ~/.claude."""
+    os.makedirs(config_dir, exist_ok=True)
+    for entry in SHARED_ENTRIES:
+        source = os.path.join(SHARED_DIR, entry)
+        if not os.path.exists(source):
+            if entry not in SHARED_CREATE:
+                continue
+            os.makedirs(source, exist_ok=True)
+
+        dest = os.path.join(config_dir, entry)
+        if os.path.islink(dest):
+            if os.readlink(dest) == source:
+                continue
+            os.unlink(dest)
+        elif os.path.exists(dest):
+            backup = dest + ".backup"
+            if report:
+                print("Backing up %s -> %s" % (dest, backup))
+            shutil.move(dest, backup)
+        os.symlink(source, dest)
+        if report:
+            print("Creating symlink %s -> %s" % (dest, source))
+
+
+# Copied into a new account's .claude.json only to skip onboarding and the
+# trust prompts. Identity, auth and caches are dropped so it starts clean.
+SEED_DROP = (
+    "oauthAccount",
+    "userID",
+    "cachedExtraUsageDisabledReason",
+    "metricsStatusCache",
+    "cachedGrowthBookFeatures",
+    "cachedGrowthBookFeaturesAt",
+    "cachedExperimentData",
+    "cachedExperimentFeatures",
+    "modelAccessCache",
+    "orgModelDefaultCache",
+    "additionalModelOptionsCache",
+    "additionalModelCostsCache",
+    "clientDataCacheSlots",
+    "claudeCodeFirstTokenDate",
+    "firstStartTime",
+    "numStartups",
+)
+
+
+def seed_config(config_dir):
+    """Give a new account the default account's preferences, minus its identity."""
+    target = config_json_path(config_dir)
+    if os.path.exists(target):
+        return
+    seed = read_json(config_json_path(None), {}) or {}
+    for key in SEED_DROP:
+        seed.pop(key, None)
+    write_json(target, seed)
+
+
+# --------------------------------------------------------------------------
+# launching
+# --------------------------------------------------------------------------
+
+
+def claude_binary():
+    me = os.path.realpath(__file__)
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = os.path.join(directory, "claude")
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            if os.path.realpath(candidate) != me:
+                return candidate
+    die("claude is not on PATH")
+
+
+def account_env(account):
+    env = dict(os.environ)
+    env.pop("CLAUDE_CONFIG_DIR", None)
+    config_dir = account_dir(account)
+    if config_dir:
+        env["CLAUDE_CONFIG_DIR"] = config_dir
+    # Handy for statuslines and hooks that want to show which account is live.
+    env["CLAUDE_PICK_ACCOUNT"] = account["id"]
+    return env
+
+
+def run_as(account, args):
+    """Run a command as an account and return its exit code.
+
+    Ctrl-C belongs to the child: the parent just keeps waiting rather than
+    tearing the session down from underneath it.
+    """
+    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account))
+    while True:
+        try:
+            return proc.wait()
+        except KeyboardInterrupt:
+            continue
+
+
+def launch(account, args):
+    try:
+        with open(LAST_FILE, "w", encoding="utf-8") as fh:
+            fh.write(account["id"])
+    except OSError:
+        pass
+    code = run_as(account, args)
+    # The token was just refreshed by the session, so this reading is free.
+    try:
+        remember_usage(account)
+    except Exception:  # never let bookkeeping change the exit code
+        pass
+    return code
+
+
+def sign_in(account):
+    config_dir = account_dir(account)
+    if config_dir:
+        link_shared(config_dir, report=False)
+        seed_config(config_dir)
+    return run_as(account, ["auth", "login"])
+
+
+# --------------------------------------------------------------------------
+# commands
+# --------------------------------------------------------------------------
+
+
+def build_rows(accounts, refresh=True):
+    with ThreadPoolExecutor(max_workers=max(1, len(accounts))) as pool:
+        identities = list(pool.map(identity, accounts))
+    cache = collect_usage(accounts, refresh=refresh)
+    return {
+        account["id"]: {"identity": ident, "usage": cache.get(account["id"])}
+        for account, ident in zip(accounts, identities)
+    }
+
+
+def cmd_list(accounts):
+    rows = build_rows(accounts)
+    for account in accounts:
+        row = rows[account["id"]]
+        who = row["identity"].get("who") or row["identity"]["state"]
+        print("  %-14s %-22s %s" % (account["id"], account.get("label") or "", who))
+        print("      %s" % usage_line(row["usage"]))
+    return 0
+
+
+def cmd_add(accounts, argv):
+    if not argv:
+        die("usage: claude-pick add <id> [label]")
+    new_id = argv[0]
+    if not ID_RE.match(new_id):
+        die("id must be lowercase letters, digits, dot, dash or underscore")
+    if find_account(accounts, new_id):
+        die("account %r already exists" % new_id)
+    label = " ".join(argv[1:]) or new_id.replace("-", " ").replace("_", " ").title()
+
+    config_dir = os.path.join(ROOT, new_id)
+    link_shared(config_dir)
+    seed_config(config_dir)
+    account = {"id": new_id, "label": label, "dir": config_dir}
+    accounts.append(account)
+    save_accounts(accounts)
+    print("\nAdded %s (%s). Signing in...\n" % (label, config_dir))
+    return sign_in(account)
+
+
+def cmd_rm(accounts, argv):
+    if not argv:
+        die("usage: claude-pick rm <id>")
+    account = find_account(accounts, argv[0])
+    if not account:
+        die("no account %r" % argv[0])
+    if account_dir(account) is None:
+        die("the default account cannot be removed")
+    accounts.remove(account)
+    save_accounts(accounts)
+    print("Forgotten. Its directory is left alone - delete it yourself:")
+    print("  claude auth logout   # while CLAUDE_CONFIG_DIR points at it")
+    print("  rm -rf %s" % account_dir(account))
+    return 0
+
+
+def cmd_label(accounts, argv):
+    if len(argv) < 2:
+        die("usage: claude-pick label <id> <text>")
+    account = find_account(accounts, argv[0])
+    if not account:
+        die("no account %r" % argv[0])
+    account["label"] = " ".join(argv[1:])
+    save_accounts(accounts)
+    return 0
+
+
+def cmd_link(accounts):
+    for account in accounts:
+        config_dir = account_dir(account)
+        if config_dir:
+            link_shared(config_dir)
+    return 0
+
+
+def main(argv):
+    os.makedirs(STATE_DIR, exist_ok=True)
+    accounts = load_accounts()
+
+    if argv and argv[0] == "--":
+        argv = argv[1:]
+    elif argv and argv[0] in VERBS:
+        verb, rest = argv[0], argv[1:]
+        if verb in ("list", "ls"):
+            return cmd_list(accounts)
+        if verb == "add":
+            return cmd_add(accounts, rest)
+        if verb in ("rm", "remove"):
+            return cmd_rm(accounts, rest)
+        if verb == "label":
+            return cmd_label(accounts, rest)
+        if verb == "link":
+            return cmd_link(accounts)
+        print(__doc__.strip())
+        return 0
+    elif argv and argv[0] in ("-h", "--help") and len(argv) == 1:
+        print(__doc__.strip())
+        return 0
+
+    if len(accounts) == 1:
+        return launch(accounts[0], argv)
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        die("no terminal to draw the picker in; try: claude-pick list")
+
+    try:
+        with open(LAST_FILE, "r", encoding="utf-8") as fh:
+            last = fh.read().strip()
+    except OSError:
+        last = None
+    start = next((i for i, a in enumerate(accounts) if a["id"] == last), 0)
+
+    choice = pick(accounts, build_rows(accounts), start)
+    if choice is None:
+        return 130
+    if isinstance(choice, tuple):
+        return sign_in(accounts[choice[1]])
+    return launch(accounts[choice], argv)
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        raise SystemExit(130)
