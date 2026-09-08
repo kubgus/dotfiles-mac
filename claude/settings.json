@@ -71,6 +71,7 @@
   },
   "skipWorkflowUsageWarning": true,
   "editorMode": "vim",
+  "preferredNotifChannel": "notifications_disabled",
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": false,
   "voiceEnabled": true
