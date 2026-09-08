@@ -63,10 +63,12 @@ out, no credential shuffling, and the script only ever reads the Keychain.
 Everything portable is symlinked from each account directory back into
 `~/.claude`, so `CLAUDE.md`, agents, skills, commands, plugins, settings and
 session transcripts are the same files whichever account is live; only identity
-and machine state are per account. `claude-pick add work` creates one and signs
-it in, `claude-pick link` re-applies the symlinks after adding a new shared
-directory. The accounts themselves are machine-local and untracked - this repo
-holds the command, not the logins.
+and machine state are per account. Accounts name themselves by the email they
+are signed in as; the id you pass to `claude-pick add work` is only a handle,
+and because it names the directory the Keychain item is keyed on, it must not
+move once that account is signed in. `claude-pick link` re-applies the symlinks
+after adding a new shared directory. The accounts themselves are machine-local
+and untracked - this repo holds the command, not the logins.
 
 **The notification sounds have an off switch outside the repo.** Two hooks
 chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn

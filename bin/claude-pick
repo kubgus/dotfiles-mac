@@ -16,11 +16,15 @@ when the account's stored access token is still valid; expired ones show the
 last figure seen, with its age. Refreshing a token would mean writing new
 credentials back to the Keychain, which this script deliberately does not do.
 
+Accounts identify themselves by the email they are signed in as, read from the
+account's own .claude.json. The id is only a handle - it names the directory,
+and because that path is what the Keychain item is keyed on, it must not move
+once the account is signed in.
+
   claude-pick [claude args...]   pick an account, then exec claude
   claude-pick list               print the accounts and their usage
-  claude-pick add <id> [label]   create an account and sign it in
+  claude-pick add <id>           create an account and sign it in
   claude-pick rm <id>            forget an account
-  claude-pick label <id> <text>  rename one in the picker
   claude-pick link               re-apply the shared symlinks
   claude-pick -- <args...>       pass args through even if they look like a verb
 """
@@ -80,10 +84,14 @@ SHARED_CREATE = frozenset({"agents", "skills", "commands", "plugins", "projects"
 # Everything else - .claude.json, sessions/, ide/, telemetry/, shell-snapshots/,
 # session-env/, cache/ - stays real and per account. That is the point.
 
+# Whatever name the command was invoked under, so advice quotes a command that
+# actually exists on this machine rather than the file's name in the repo.
+PROG = os.path.basename(sys.argv[0]) or "claude-pick"
+
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 KEYCHAIN_ACCOUNT_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
 
-VERBS = {"list", "ls", "add", "rm", "remove", "label", "link", "help"}
+VERBS = {"list", "ls", "add", "rm", "remove", "link", "help"}
 
 
 # --------------------------------------------------------------------------
@@ -119,7 +127,7 @@ S = Style(colour_wanted())
 
 
 def die(msg, code=1):
-    sys.stderr.write("claude-pick: %s\n" % msg)
+    sys.stderr.write("%s: %s\n" % (PROG, msg))
     raise SystemExit(code)
 
 
@@ -155,8 +163,10 @@ def load_accounts():
     """The account list, seeding a default entry on first run."""
     data = read_json(ACCOUNTS_FILE)
     if not isinstance(data, dict) or not isinstance(data.get("accounts"), list):
-        data = {"accounts": [{"id": "default", "label": "Default", "dir": None}]}
+        data = {"accounts": [{"id": "default", "dir": None}]}
         write_json(ACCOUNTS_FILE, data)
+    for account in data["accounts"]:
+        account.pop("label", None)  # accounts used to carry a hand-written name
     return data["accounts"]
 
 
@@ -316,18 +326,34 @@ def config_json_path(config_dir):
 
 
 def identity(account):
-    """Who an account belongs to, read straight out of its own .claude.json."""
+    """Who an account belongs to, read straight out of its own .claude.json.
+
+    The email is the account's name in the picker; the org and plan are the
+    supporting detail beside it.
+    """
     config_dir = account_dir(account)
     if config_dir is not None and not os.path.isdir(config_dir):
-        return {"state": "missing"}
+        return {"state": "missing", "detail": "directory missing - run: %s link" % PROG}
     if not signed_in(config_dir):
-        return {"state": "logged-out"}
+        return {"state": "logged-out", "detail": "not signed in"}
+
     oauth = (read_json(config_json_path(config_dir), {}) or {}).get("oauthAccount") or {}
-    parts = [oauth.get("emailAddress"), oauth.get("organizationName")]
     plan = oauth.get("subscriptionType") or oauth.get("seatTier")
+    parts = [oauth.get("organizationName")]
     if plan:
         parts.append(str(plan).replace("_", " "))
-    return {"state": "ok", "who": " · ".join(p for p in parts if p) or "signed in"}
+    detail = " · ".join(p for p in parts if p)
+    email = oauth.get("emailAddress")
+    return {"state": "ok", "email": email, "detail": detail or ("" if email else "signed in")}
+
+
+def display_name(account, ident):
+    """The email, falling back to the id while there is no profile to read."""
+    return ident.get("email") or account["id"]
+
+
+def clip(text, width):
+    return text if len(text) <= width else text[: max(1, width - 1)] + "…"
 
 
 # --------------------------------------------------------------------------
@@ -397,10 +423,16 @@ def usage_line(entry):
     return "%s   %s   %s%s%s" % (five, week, S.dim, freshness(entry), S.reset)
 
 
-def detail_line(entry):
-    """The resets-in hint shown under the highlighted account."""
+def detail_line(row):
+    """The line under the highlighted account: what to do, or when limits reset."""
+    state = row["identity"]["state"]
+    if state == "logged-out":
+        return "press s to sign this account in"
+    if state == "missing":
+        return "its directory is gone - run: %s link" % PROG
+    entry = row["usage"]
     if not entry:
-        return "no usage reading - sign in, or run a session to record one"
+        return "no usage reading yet - one is recorded when a session ends"
     bits = []
     for label, key in (("5h", "five_hour"), ("week", "seven_day")):
         slice_ = entry.get(key)
@@ -432,22 +464,24 @@ def render(out, accounts, rows, cursor):
     out.write("\033[H\033[2J")
     out.write("  %sClaude Code%s %s· pick an account%s\n\n" % (S.bold, S.reset, S.dim, S.reset))
 
+    # Emails vary in length far more than hand-written names did, so size the
+    # column to whatever is actually there rather than to a fixed guess.
+    names = {a["id"]: display_name(a, rows[a["id"]]["identity"]) for a in accounts}
+    name_width = min(34, max(14, max(len(n) for n in names.values())))
+
     for index, account in enumerate(accounts):
         row = rows[account["id"]]
         selected = index == cursor
         marker = "%s▸%s" % (S.accent, S.reset) if selected else " "
-        name = pad(account.get("label") or account["id"], 22)
+        name = pad(clip(names[account["id"]], name_width), name_width)
         if selected:
             name = "%s%s%s" % (S.bold, name, S.reset)
-        who = row["identity"].get("who") or {
-            "missing": "directory missing - run: claude-pick link",
-            "logged-out": "not signed in - press s",
-        }.get(row["identity"]["state"], "")
-        out.write("  %s %s %s%s%s\n" % (marker, name, S.dim, who[: max(0, width - 30)], S.reset))
+        detail = row["identity"].get("detail", "")
+        room = max(0, width - name_width - 9)
+        out.write("  %s %s  %s%s%s\n" % (marker, name, S.dim, clip(detail, room), S.reset))
         out.write("      %s\n\n" % usage_line(row["usage"]))
 
-    selected_row = rows[accounts[cursor]["id"]]
-    out.write("  %s%s%s\n\n" % (S.dim, detail_line(selected_row["usage"]), S.reset))
+    out.write("  %s%s%s\n\n" % (S.dim, detail_line(rows[accounts[cursor]["id"]]), S.reset))
     out.write(
         "  %s↑↓ move · enter launch · s sign in · r refresh · q quit%s\n"
         % (S.dim, S.reset)
@@ -640,35 +674,35 @@ def cmd_list(accounts):
     rows = build_rows(accounts)
     for account in accounts:
         row = rows[account["id"]]
-        who = row["identity"].get("who") or row["identity"]["state"]
-        print("  %-14s %-22s %s" % (account["id"], account.get("label") or "", who))
+        name = display_name(account, row["identity"])
+        print("  %-12s %-30s %s" % (account["id"], name, row["identity"].get("detail", "")))
         print("      %s" % usage_line(row["usage"]))
     return 0
 
 
 def cmd_add(accounts, argv):
-    if not argv:
-        die("usage: claude-pick add <id> [label]")
+    if len(argv) != 1:
+        die("usage: %s add <id>   (the id names the directory; the picker "
+            "shows the email you sign in as)" % PROG)
     new_id = argv[0]
     if not ID_RE.match(new_id):
         die("id must be lowercase letters, digits, dot, dash or underscore")
     if find_account(accounts, new_id):
         die("account %r already exists" % new_id)
-    label = " ".join(argv[1:]) or new_id.replace("-", " ").replace("_", " ").title()
 
     config_dir = os.path.join(ROOT, new_id)
     link_shared(config_dir)
     seed_config(config_dir)
-    account = {"id": new_id, "label": label, "dir": config_dir}
+    account = {"id": new_id, "dir": config_dir}
     accounts.append(account)
     save_accounts(accounts)
-    print("\nAdded %s (%s). Signing in...\n" % (label, config_dir))
+    print("\nAdded %s. Signing in...\n" % config_dir)
     return sign_in(account)
 
 
 def cmd_rm(accounts, argv):
     if not argv:
-        die("usage: claude-pick rm <id>")
+        die("usage: %s rm <id>" % PROG)
     account = find_account(accounts, argv[0])
     if not account:
         die("no account %r" % argv[0])
@@ -679,17 +713,6 @@ def cmd_rm(accounts, argv):
     print("Forgotten. Its directory is left alone - delete it yourself:")
     print("  claude auth logout   # while CLAUDE_CONFIG_DIR points at it")
     print("  rm -rf %s" % account_dir(account))
-    return 0
-
-
-def cmd_label(accounts, argv):
-    if len(argv) < 2:
-        die("usage: claude-pick label <id> <text>")
-    account = find_account(accounts, argv[0])
-    if not account:
-        die("no account %r" % argv[0])
-    account["label"] = " ".join(argv[1:])
-    save_accounts(accounts)
     return 0
 
 
@@ -715,8 +738,6 @@ def main(argv):
             return cmd_add(accounts, rest)
         if verb in ("rm", "remove"):
             return cmd_rm(accounts, rest)
-        if verb == "label":
-            return cmd_label(accounts, rest)
         if verb == "link":
             return cmd_link(accounts)
         print(__doc__.strip())
@@ -728,7 +749,7 @@ def main(argv):
     if len(accounts) == 1:
         return launch(accounts[0], argv)
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
-        die("no terminal to draw the picker in; try: claude-pick list")
+        die("no terminal to draw the picker in; try: %s list" % PROG)
 
     try:
         with open(LAST_FILE, "r", encoding="utf-8") as fh:
