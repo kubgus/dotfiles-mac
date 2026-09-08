@@ -1,22 +1,9 @@
 {
-  "env": {
-    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
-  },
   "permissions": {
     "defaultMode": "auto"
   },
   "model": "opus[1m]",
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;⚡ %s\\007' \"${n##*/}\" > \"$d\"; exit 0"
-          }
-        ]
-      }
-    ],
     "PermissionRequest": [
       {
         "matcher": "",
@@ -24,10 +11,6 @@
           {
             "type": "command",
             "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &"
-          },
-          {
-            "type": "command",
-            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;❓ %s\\007\\a' \"${n##*/}\" > \"$d\"; exit 0"
           }
         ]
       }
@@ -38,20 +21,6 @@
           {
             "type": "command",
             "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &"
-          },
-          {
-            "type": "command",
-            "command": "n=${CLAUDE_PROJECT_DIR:-$PWD}; d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;✅ %s\\007\\a' \"${n##*/}\" > \"$d\"; exit 0"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "d=/dev/$(ps -o tty= -p ${CLAUDE_PID:-$PPID} 2>/dev/null | tr -d ' '); [ -w \"$d\" ] && printf '\\033]0;\\007' > \"$d\"; exit 0"
           }
         ]
       }
