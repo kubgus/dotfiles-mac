@@ -90,6 +90,17 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/title.sh\" 💤"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [

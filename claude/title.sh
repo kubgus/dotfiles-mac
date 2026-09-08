@@ -21,6 +21,14 @@
 # case: it runs before the permission check, so the next tool Claude reaches
 # for clears the red without ever painting over a prompt that is still waiting.
 #
+# SessionStart paints 💤 when a session opens - starting up, resuming another
+# one from /resume, clearing, forking - because the title of whatever ran here
+# before is not this session's state. `compact` is left out of that matcher on
+# purpose: auto compaction happens mid-turn, and 💤 would claim the turn was
+# over. Entering a session from the agent view is not hookable at all - the
+# events are session and tool lifecycle, and none of them fires for a change of
+# what is merely on screen.
+#
 # A hook must never break the tool call that triggered it, so every path here
 # exits 0 - including a session with no terminal to write to, like a
 # background job or a cloud run.
