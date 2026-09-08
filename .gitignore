@@ -5,6 +5,7 @@ config/*
 
 # the future is now, old man
 /CLAUDE.local.md
+tmp
 
 # 😭
 .DS_Store
