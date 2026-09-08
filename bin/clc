@@ -547,16 +547,28 @@ def detail_line(row):
 # --------------------------------------------------------------------------
 
 
-def read_key(stream):
-    first = stream.read(1)
-    if first != "\x1b":
-        return first
-    # A bare Escape is just ESC; an arrow key is ESC [ A. Peek rather than read,
-    # so pressing Escape does not hang waiting for two bytes that never come.
-    if not select.select([stream], [], [], 0.05)[0]:
+# Arrows arrive as CSI normally and as SS3 when the terminal is in application
+# cursor mode, which tmux and some terminals switch on.
+ARROW_KEYS = {
+    b"[A": "up", b"[B": "down", b"[C": "right", b"[D": "left",
+    b"OA": "up", b"OB": "down", b"OC": "right", b"OD": "left",
+}
+
+
+def read_key(fd):
+    """One keypress, read from the descriptor rather than through sys.stdin.
+
+    An arrow key arrives as three bytes in one go. Reading the first through a
+    buffered stream pulls all three into Python's buffer, where select cannot
+    see the other two - so every arrow looked like a bare Escape and quit.
+    """
+    first = os.read(fd, 1)
+    if first != b"\x1b":
+        return first.decode("utf-8", "replace")
+    # A bare Escape is just ESC; anything longer is a sequence already waiting.
+    if not select.select([fd], [], [], 0.05)[0]:
         return "esc"
-    rest = stream.read(2)
-    return {"[A": "up", "[B": "down", "[C": "right", "[D": "left"}.get(rest, "esc")
+    return ARROW_KEYS.get(os.read(fd, 2), "esc")
 
 
 CHROME_LINES = 5  # header + blank, then the detail line, a blank and the keys
@@ -652,7 +664,7 @@ def pick(accounts, rows, start):
         while True:
             size = shutil.get_terminal_size((100, 24))
             block.draw(render_lines(accounts, rows, cursor, size.columns, size.lines))
-            key = read_key(sys.stdin)
+            key = read_key(fd)
             if key in ("q", "\x03", "\x04", "esc"):
                 return None
             if key in ("up", "k"):
