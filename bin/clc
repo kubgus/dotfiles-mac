@@ -6,10 +6,19 @@ item name from a hash of that path, so pointing the env var somewhere else is
 the whole of the account switch: separate credentials, separate identity, no
 logging out and back in. This script only ever *reads* the Keychain.
 
-Everything portable - CLAUDE.md, agents, skills, commands, plugins, settings,
-session transcripts - is symlinked back into ~/.claude, so it is one set of
-files whichever account is active. Only identity and machine state are per
-account.
+The switch is meant not to be felt. Every entry in ~/.claude is symlinked into
+each account except the handful that genuinely cannot be shared, so agents,
+skills, commands, plugins, transcripts, prompt history, file history, running
+sessions and background jobs are one set of files whichever account is active -
+and anything a future version drops in there is shared too, without this list
+needing to know about it.
+
+~/.claude.json cannot be symlinked, because it holds the account's identity
+next to all the preferences. It is synced key by key instead: the shared half
+is pulled in before a session and pushed back after, so project trust, MCP
+servers, onboarding and the rest follow you, while oauthAccount stays put. Last
+writer wins if two accounts run at once, which is how that file already behaves
+between concurrent sessions of one account.
 
 An account is named by its email and nothing else. The directory under
 ~/.claude-accounts/ *is* the email, the list of accounts *is* what is in that
@@ -66,29 +75,52 @@ FETCH_TIMEOUT = 6.0
 LIVE_WINDOW = 120  # a reading younger than this reads as "live"
 SKEW = 60  # treat a token expiring within a minute as already expired
 
-# Linked from each account directory back into ~/.claude. Order is cosmetic.
-SHARED_ENTRIES = (
-    "CLAUDE.md",
-    "settings.json",
-    "settings.local.json",
-    "keybindings.json",
-    "history.jsonl",
-    "agents",
-    "skills",
-    "commands",
-    "output-styles",
-    "workflows",
-    "hooks",
-    "plugins",
-    "projects",
-    "todos",
-    "plans",
-)
-# Created in ~/.claude if absent, so a fresh account still shares them.
-SHARED_CREATE = frozenset({"agents", "skills", "commands", "plugins", "projects"})
+# Everything in ~/.claude is shared except these. A denylist rather than an
+# allowlist so that whatever a future version of Claude Code starts writing is
+# shared by default - the way round that matches wanting not to feel the switch.
+PRIVATE_ENTRIES = frozenset({
+    # The daemon is a singleton per config dir, and these name its process.
+    # Sharing them would have two daemons fighting over one lock.
+    "daemon",
+    "daemon.lock",
+    "daemon.log",
+    "daemon.status.json",
+    # Fetched from whichever org the account belongs to.
+    "policy-limits.json",
+    "remote-settings.json",
+    # Per-account queues, caches and lockfiles for live processes.
+    "telemetry",
+    "statsig",
+    "ide",
+    # Backups of the per-account .claude.json.
+    "backups",
+    ".last-cleanup",
+    ".DS_Store",
+})
 
-# Everything else - .claude.json, sessions/, ide/, telemetry/, shell-snapshots/,
-# session-env/, cache/ - stays real and per account. That is the point.
+# ~/.claude.json is one file holding both identity and preferences, so it is
+# merged rather than linked. These keys stay with the account; everything else,
+# including anything added later, follows you between them.
+PRIVATE_CONFIG_KEYS = frozenset({
+    "oauthAccount",
+    "userID",
+    "claudeCodeFirstTokenDate",
+    "firstStartTime",
+    "numStartups",
+    # Caches scoped to the account's org or entitlements.
+    "cachedGrowthBookFeatures",
+    "cachedGrowthBookFeaturesAt",
+    "cachedExperimentData",
+    "cachedExperimentFeatures",
+    "cachedExtraUsageDisabledReason",
+    "modelAccessCache",
+    "orgModelDefaultCache",
+    "additionalModelOptionsCache",
+    "additionalModelCostsCache",
+    "autoCompactWindowsCache",
+    "clientDataCacheSlots",
+    "metricsStatusCache",
+})
 
 # Whatever name the command was invoked under, so advice quotes a command that
 # actually exists on this machine rather than the file's name in the repo.
@@ -579,28 +611,60 @@ def pick(accounts, rows, start):
 
 
 def link_shared(config_dir, report=True):
-    """Point an account directory's portable entries back at ~/.claude."""
-    os.makedirs(config_dir, exist_ok=True)
-    for entry in SHARED_ENTRIES:
-        source = os.path.join(SHARED_DIR, entry)
-        if not os.path.exists(source):
-            if entry not in SHARED_CREATE:
-                continue
-            os.makedirs(source, exist_ok=True)
+    """Point everything shareable in an account directory back at ~/.claude.
 
+    Run before every session, not just at `add`, so an entry that appears in
+    ~/.claude later is picked up without anyone having to remember to relink.
+    """
+    os.makedirs(config_dir, exist_ok=True)
+
+    try:
+        entries = sorted(os.listdir(SHARED_DIR))
+    except OSError:
+        entries = []
+
+    for entry in entries:
+        if entry in PRIVATE_ENTRIES:
+            continue
+        source = os.path.join(SHARED_DIR, entry)
         dest = os.path.join(config_dir, entry)
         if os.path.islink(dest):
             if os.readlink(dest) == source:
                 continue
             os.unlink(dest)
         elif os.path.exists(dest):
-            backup = dest + ".backup"
+            spare = dest + ".backup"
             if report:
-                print("Backing up %s -> %s" % (dest, backup))
-            shutil.move(dest, backup)
+                print("Backing up %s -> %s" % (dest, spare))
+            shutil.move(dest, spare)
         os.symlink(source, dest)
         if report:
             print("Creating symlink %s -> %s" % (dest, source))
+
+    prune_stale_links(config_dir, report)
+
+
+def prune_stale_links(config_dir, report=True):
+    """Drop links to shared entries that have since gone or turned private.
+
+    Only ever unlinks a symlink that points into ~/.claude, so nothing an
+    account owns outright can be caught by it.
+    """
+    try:
+        entries = os.listdir(config_dir)
+    except OSError:
+        return
+    for entry in entries:
+        dest = os.path.join(config_dir, entry)
+        if not os.path.islink(dest):
+            continue
+        target = os.readlink(dest)
+        if not target.startswith(SHARED_DIR + os.sep):
+            continue
+        if entry in PRIVATE_ENTRIES or not os.path.exists(target):
+            os.unlink(dest)
+            if report:
+                print("Removing stale symlink %s" % dest)
 
 
 def remove_account_dir(config_dir):
@@ -620,37 +684,46 @@ def remove_account_dir(config_dir):
     os.rmdir(config_dir)
 
 
-# Copied into a new account's .claude.json only to skip onboarding and the
-# trust prompts. Identity, auth and caches are dropped so it starts clean.
-SEED_DROP = (
-    "oauthAccount",
-    "userID",
-    "cachedExtraUsageDisabledReason",
-    "metricsStatusCache",
-    "cachedGrowthBookFeatures",
-    "cachedGrowthBookFeaturesAt",
-    "cachedExperimentData",
-    "cachedExperimentFeatures",
-    "modelAccessCache",
-    "orgModelDefaultCache",
-    "additionalModelOptionsCache",
-    "additionalModelCostsCache",
-    "clientDataCacheSlots",
-    "claudeCodeFirstTokenDate",
-    "firstStartTime",
-    "numStartups",
-)
+def split_config(shared_from, private_from):
+    """One .claude.json: shared keys from the first, account keys from the second."""
+    merged = {k: v for k, v in shared_from.items() if k not in PRIVATE_CONFIG_KEYS}
+    merged.update({k: v for k, v in private_from.items() if k in PRIVATE_CONFIG_KEYS})
+    return merged
 
 
-def seed_config(config_dir):
-    """Give a new account the default account's preferences, minus its identity."""
-    target = config_json_path(config_dir)
-    if os.path.exists(target):
+def sync_config_in(config_dir):
+    """Bring the shared half of ~/.claude.json into this account before a session.
+
+    A fresh account gets everything but the identity keys, which is also how it
+    skips onboarding and inherits the directories already trusted.
+    """
+    if config_dir is None:  # the default account already is ~/.claude.json
         return
-    seed = read_json(config_json_path(None), {}) or {}
-    for key in SEED_DROP:
-        seed.pop(key, None)
-    write_json(target, seed)
+    master = read_json(config_json_path(None))
+    if not isinstance(master, dict):
+        return
+    target = config_json_path(config_dir)
+    mine = read_json(target, {})
+    write_json(target, split_config(master, mine if isinstance(mine, dict) else {}))
+
+
+def sync_config_out(config_dir):
+    """Push the shared half back to ~/.claude.json once the session is over."""
+    if config_dir is None:
+        return
+    mine = read_json(config_json_path(config_dir))
+    master_path = config_json_path(None)
+    master = read_json(master_path)
+    # Refuse rather than overwrite a file that would not parse - it is the one
+    # copy every account pulls from.
+    if not isinstance(mine, dict) or not isinstance(master, dict):
+        return
+    try:
+        os.makedirs(STATE_DIR, exist_ok=True)
+        shutil.copyfile(master_path, os.path.join(STATE_DIR, "claude.json.bak"))
+    except OSError:
+        pass
+    write_json(master_path, split_config(mine, master))
 
 
 # --------------------------------------------------------------------------
@@ -693,16 +766,40 @@ def run_as(account, name, args):
             continue
 
 
+def adopt(account):
+    """Bring an account level with the shared state before handing it the terminal."""
+    config_dir = account_dir(account)
+    if config_dir is None:
+        return
+    link_shared(config_dir, report=False)
+    sync_config_in(config_dir)
+
+
+def settle(account):
+    """Fold whatever the session changed back into the shared state."""
+    config_dir = account_dir(account)
+    if config_dir is not None:
+        sync_config_out(config_dir)
+
+
 def launch(account, name, args):
+    # Nothing here is worth failing a launch over, so a broken sync is silent.
+    try:
+        adopt(account)
+    except OSError:
+        pass
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
         with open(LAST_FILE, "w", encoding="utf-8") as fh:
             fh.write(account_key(account))
     except OSError:
         pass
+
     code = run_as(account, name, args)
-    # The token was just refreshed by the session, so this reading is free.
+
     try:
+        settle(account)
+        # The token was just refreshed by the session, so this reading is free.
         remember_usage(account)
     except Exception:  # never let bookkeeping change the exit code
         pass
@@ -710,11 +807,16 @@ def launch(account, name, args):
 
 
 def sign_in(account, name):
-    config_dir = account_dir(account)
-    if config_dir:
-        link_shared(config_dir, report=False)
-        seed_config(config_dir)
-    return run_as(account, name, ["auth", "login"])
+    try:
+        adopt(account)
+    except OSError:
+        pass
+    code = run_as(account, name, ["auth", "login"])
+    try:
+        settle(account)
+    except Exception:
+        pass
+    return code
 
 
 def sign_out(account, name):
@@ -749,8 +851,7 @@ def cmd_add(argv):
     if os.path.exists(config_dir):
         die("%s is already an account - run: %s list" % (email, PROG))
 
-    link_shared(config_dir)
-    seed_config(config_dir)
+    link_shared(config_dir)  # sign_in pulls the shared config in after this
     account = {"dir": config_dir}
     print("\nAdded %s. Signing in...\n" % config_dir.replace(HOME, "~"))
     code = sign_in(account, email)
