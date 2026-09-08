@@ -1,17 +1,35 @@
 #!/bin/bash
+# Point git's user identity at one of the credential sets defined below.
+#
+# Local by default - the identity lands in this repository's .git/config and
+# nowhere else. -g writes it to ~/.gitconfig instead.
+#
+# A credential set is a pair of variables named <key>_name and <key>_email, and
+# the prompt takes that <key>. Adding a set means adding the pair; there is no
+# list anywhere to keep in step with it.
+set -euo pipefail
 
-# Define credentials
+# Reached by indirect expansion through the key typed at the prompt, which is
+# not something shellcheck can see.
+# shellcheck disable=SC2034
 personal_name="Jakub Guštafik"
+# shellcheck disable=SC2034
 personal_email="mail@gustafik.com"
 
-# Default to local scope
-scope=""
+# --local is already git's default write target, so naming it explicitly changes
+# no behaviour - it just means "$scope" is always a single word and can stay
+# quoted, rather than being an empty string that has to word-split away.
+scope="--local"
+target="local (this repository)"
 
-# Parse flags
-while getopts "g" opt; do
+# Parse flags. The leading colon makes getopts silent, which is what puts the
+# offending character in OPTARG - without it bash prints its own message and
+# leaves OPTARG unset, and under set -u that is a crash rather than a complaint.
+while getopts ":g" opt; do
   case $opt in
     g)
       scope="--global"
+      target="global (~/.gitconfig)"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -21,19 +39,26 @@ while getopts "g" opt; do
 done
 
 # Shift off the options so they don't interfere with other arguments
-shift $((OPTIND -1))
+shift $((OPTIND - 1))
 
 # ========================================================
 
-echo "Targeting: ${scope:-local (current directory)}"
-read -p "Select credentials to use (personal/...): " choice
+echo "Targeting: $target"
+# Ctrl-D at the prompt is a deliberate abort, not a missing credential set.
+if ! read -rp "Select credentials to use (personal/...): " choice; then
+    echo "Aborted." >&2
+    exit 1
+fi
 
 # Validate input exists
 name_var="${choice}_name"
 email_var="${choice}_email"
 
-if [[ -z "${!name_var}" ]]; then
-    echo "Error: Credentials for '${choice}' not found."
+# The -} default is load-bearing: under set -u a bare ${!name_var} on a key
+# that has no pair aborts with "unbound variable" instead of reaching the
+# message below.
+if [[ -z "${!name_var-}" ]]; then
+    echo "Error: Credentials for '${choice}' not found." >&2
     exit 1
 fi
 
@@ -41,12 +66,12 @@ fi
 name="${!name_var}"
 email="${!email_var}"
 
-echo "Configuring Git ${scope} with '${choice}' credentials..."
+echo "Configuring git ($target) with '${choice}' credentials..."
 
 echo "Setting user.name to '${name}'"
-git config $scope user.name "$name"
+git config "$scope" user.name "$name"
 
 echo "Setting user.email to '${email}'"
-git config $scope user.email "$email"
+git config "$scope" user.email "$email"
 
 echo "Done!"
