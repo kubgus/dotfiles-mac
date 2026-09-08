@@ -1,22 +1,9 @@
 {
-  "env": {
-    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
-  },
   "permissions": {
     "defaultMode": "auto"
   },
   "model": "opus[1m]",
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 🌀"
-          }
-        ]
-      }
-    ],
     "PermissionRequest": [
       {
         "matcher": "",
@@ -27,51 +14,7 @@
           },
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 🔴 bell"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 🌀"
-          }
-        ]
-      }
-    ],
-    "PermissionDenied": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 🌀"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 🌀"
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 🌀"
+            "command": "bash \"$HOME/.claude/bell.sh\""
           }
         ]
       }
@@ -85,28 +28,7 @@
           },
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 💤 bell"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear|fork",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\" 💤"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/title.sh\""
+            "command": "bash \"$HOME/.claude/bell.sh\""
           }
         ]
       }
