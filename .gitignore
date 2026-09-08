@@ -9,5 +9,5 @@ config/*
 # 😭
 .DS_Store
 
-# left behind by importing bin/claude-pick, and bin/* is linked wholesale
+# left behind by importing bin/clc, and bin/* is linked wholesale
 __pycache__/

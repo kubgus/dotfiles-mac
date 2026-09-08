@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""claude-pick - choose which Claude Code account to run as, then launch it.
+"""clc - choose which Claude Code account to run as, then launch it.
 
 An account is nothing but a CLAUDE_CONFIG_DIR. Claude Code derives its Keychain
 item name from a hash of that path, so pointing the env var somewhere else is
@@ -21,12 +21,12 @@ account's own .claude.json. The id is only a handle - it names the directory,
 and because that path is what the Keychain item is keyed on, it must not move
 once the account is signed in.
 
-  claude-pick [claude args...]   pick an account, then exec claude
-  claude-pick list               print the accounts and their usage
-  claude-pick add <id>           create an account and sign it in
-  claude-pick rm <id>            forget an account
-  claude-pick link               re-apply the shared symlinks
-  claude-pick -- <args...>       pass args through even if they look like a verb
+  clc [claude args...]   pick an account, then exec claude
+  clc list               print the accounts and their usage
+  clc add <id>           create an account and sign it in
+  clc rm <id>            forget an account
+  clc link               re-apply the shared symlinks
+  clc -- <args...>       pass args through even if they look like a verb
 """
 
 import hashlib
@@ -86,7 +86,7 @@ SHARED_CREATE = frozenset({"agents", "skills", "commands", "plugins", "projects"
 
 # Whatever name the command was invoked under, so advice quotes a command that
 # actually exists on this machine rather than the file's name in the repo.
-PROG = os.path.basename(sys.argv[0]) or "claude-pick"
+PROG = os.path.basename(sys.argv[0]) or "clc"
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 KEYCHAIN_ACCOUNT_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
@@ -260,7 +260,7 @@ def fetch_usage(config_dir):
             "Authorization": "Bearer %s" % token,
             "anthropic-beta": OAUTH_BETA,
             "Content-Type": "application/json",
-            "User-Agent": "claude-pick",
+            "User-Agent": "clc",
         },
     )
     try:
