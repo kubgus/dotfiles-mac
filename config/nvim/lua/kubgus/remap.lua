@@ -104,6 +104,17 @@ local function copy_claude_reference(first, last)
     ref = ref .. "#L" .. first .. (last > first and "-" .. last or "")
   end
 
+  -- Claude Code's own completion quotes a path exactly when it holds a space,
+  -- and its parser takes the quotes off before splitting the #L range from the
+  -- end - so the range belongs inside them, not after them. Any whitespace
+  -- ends an unquoted mention, not only a space, so quote on all of it.
+  if ref:find("%s") then
+    if ref:find('"') then
+      vim.notify("Claude cannot parse a path holding both a space and a quote", vim.log.levels.WARN)
+    end
+    ref = '"' .. ref .. '"'
+  end
+
   ref = "@" .. ref
   vim.fn.setreg("+", ref)
   vim.notify("Copied " .. ref)
