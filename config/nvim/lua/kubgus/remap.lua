@@ -1,6 +1,11 @@
 -- Leader key (set before plugins load so their <leader> mappings resolve)
 vim.g.mapleader = " "
 
+-- What the mappings below call. Anything with a body worth reading lives in
+-- kubgus.util; this file is the keys and nothing else.
+local claude = require("kubgus.util.claude")
+local richtext = require("kubgus.util.richtext")
+
 -- Move the visual selection up/down a line and re-indent it
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
@@ -29,108 +34,13 @@ vim.keymap.set("n", "<leader>Y", [["+Y]])
 -- Delete into the black hole register (don't overwrite the yank register)
 vim.keymap.set({"n", "v"}, "<leader>d", "\"_d")
 
--- Copy markdown as rich text (cross-platform: macOS + Linux)
-local function copy_as_rich_text(markdown)
-  local html = vim.fn.system("pandoc -f markdown -t html", markdown)
-  if vim.v.shell_error ~= 0 then
-    vim.notify("pandoc failed: " .. html, vim.log.levels.ERROR)
-    return
-  end
+-- Copy markdown as rich text, for pasting into a document or a mail client
+vim.keymap.set("n", "<leader>mc", richtext.copy_buffer, { desc = "Copy buffer as rich text" })
+vim.keymap.set("v", "<leader>mc", richtext.copy_selection, { desc = "Copy selection as rich text" })
 
-  local sysname = vim.loop.os_uname().sysname
-
-  if sysname == "Darwin" then
-    local hex = vim.fn.system("hexdump -ve '1/1 \"%.2x\"'", html)
-    local script = string.format(
-      'set the clipboard to {text:" ", «class HTML»:«data HTML%s»}',
-      hex
-    )
-    vim.fn.system({ "osascript", "-" }, script)
-  elseif sysname == "Linux" then
-    if vim.env.WAYLAND_DISPLAY then
-      vim.fn.system({ "wl-copy", "--type", "text/html" }, html)
-    else
-      vim.fn.system({ "xclip", "-selection", "clipboard", "-t", "text/html" }, html)
-    end
-  else
-    vim.notify("Unsupported platform: " .. sysname, vim.log.levels.ERROR)
-    return
-  end
-
-  if vim.v.shell_error ~= 0 then
-    vim.notify("Clipboard copy failed", vim.log.levels.ERROR)
-  else
-    vim.notify("Copied as rich text")
-  end
-end
-
--- Normal mode: whole buffer (works even if unsaved)
-vim.keymap.set("n", "<leader>mc", function()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  copy_as_rich_text(table.concat(lines, "\n"))
-end, { desc = "Copy buffer as rich text" })
-
--- Visual mode: selection
-vim.keymap.set("v", "<leader>mc", function()
-  vim.cmd('normal! "ry')
-  copy_as_rich_text(vim.fn.getreg("r"))
-end, { desc = "Copy selection as rich text" })
-
--- Copy a Claude Code @-reference to the current file. Visual mode appends the
--- selected line range in the #L<start>-<end> form Claude parses; a one-line
--- selection drops the second half.
-local function copy_claude_reference(first, last)
-  local path = vim.api.nvim_buf_get_name(0)
-  if path == "" then
-    vim.notify("Buffer has no file to reference", vim.log.levels.ERROR)
-    return
-  end
-
-  -- Claude resolves @-paths against its own cwd, so a cwd-relative path is the
-  -- useful spelling. Try the buffer name and its symlink target and keep
-  -- whichever lands inside the cwd: reaching a dotfile through ~/.config finds
-  -- it under a name that does not, and the repo it really lives in is where
-  -- Claude is running. fnamemodify returns the absolute path unchanged when it
-  -- cannot relativise, so the shorter of the two is the one that worked.
-  local ref = path
-  for _, candidate in ipairs({ path, vim.fn.resolve(path) }) do
-    local rel = vim.fn.fnamemodify(candidate, ":.")
-    if #rel < #ref then
-      ref = rel
-    end
-  end
-
-  if first then
-    ref = ref .. "#L" .. first .. (last > first and "-" .. last or "")
-  end
-
-  -- Claude Code's own completion quotes a path exactly when it holds a space,
-  -- and its parser takes the quotes off before splitting the #L range from the
-  -- end - so the range belongs inside them, not after them. Any whitespace
-  -- ends an unquoted mention, not only a space, so quote on all of it.
-  if ref:find("%s") then
-    if ref:find('"') then
-      vim.notify("Claude cannot parse a path holding both a space and a quote", vim.log.levels.WARN)
-    end
-    ref = '"' .. ref .. '"'
-  end
-
-  ref = "@" .. ref
-  vim.fn.setreg("+", ref)
-  vim.notify("Copied " .. ref)
-end
-
-vim.keymap.set("n", "<leader>ac", function()
-  copy_claude_reference()
-end, { desc = "Copy Claude reference to this file" })
-
-vim.keymap.set("v", "<leader>ac", function()
-  -- '< and '> only settle on leaving visual mode, and a Lua callback mapping
-  -- behaves like <Cmd> and never leaves it, so read the live anchor and cursor.
-  local first, last = vim.fn.line("v"), vim.fn.line(".")
-  vim.cmd("normal! \27") -- drop the selection, the way a yank would
-  copy_claude_reference(math.min(first, last), math.max(first, last))
-end, { desc = "Copy Claude reference to the selected lines" })
+-- Copy a Claude Code @-reference to this file, for pasting into a prompt
+vim.keymap.set("n", "<leader>ac", claude.copy_reference, { desc = "Copy Claude reference to this file" })
+vim.keymap.set("v", "<leader>ac", claude.copy_range, { desc = "Copy Claude reference to the selected lines" })
 
 -- This is going to get me cancelled
 --vim.keymap.set("i", "<C-c>", "<Esc>")
