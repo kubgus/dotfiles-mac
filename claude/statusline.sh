@@ -1,9 +1,9 @@
 #!/bin/bash
 # Claude Code status line: cwd + git branch (with a dirty marker), model and
 # reasoning effort, a meters segment - context and the Claude.ai subscription
-# limits, each with the time left until it resets - then the session cost.
-# Every percentage is USED, not remaining, so the three read in the same
-# direction.
+# limits, each with the time left until it resets - then the session cost and
+# the initials of the account spending it. Every percentage is USED, not
+# remaining, so the three read in the same direction.
 set -euo pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -18,13 +18,16 @@ get() {
 # --- colors (kept subtle; the status line already renders dimmed) ---
 # Green, yellow and red mean severity and nothing else, so they stay reserved
 # for the meters and the dirty marker. Everything else is identity: cyan for
-# the directory, magenta for the model, plain white for the branch and the
-# session cost. The branch is deliberately not yellow - that collided with the
-# auto-mode indicator that sits directly under this line.
+# the directory, magenta for the model, orange for the account, plain white for
+# the branch and the session cost. The branch is deliberately not yellow - that
+# collided with the auto-mode indicator that sits directly under this line.
+# Orange is the one colour reaching past the 8-colour set, because that set has
+# no orange and borrowing yellow would read as a warning.
 c_reset=$'\033[0m'
 c_dir=$'\033[36m'
 c_dirty=$'\033[31m'
 c_model=$'\033[35m'
+c_account=$'\033[38;5;208m'
 c_text=$'\033[37m'
 c_ok=$'\033[32m'
 c_warn=$'\033[33m'
@@ -114,10 +117,27 @@ cost="$(get '.cost.total_cost_usd')"
 cost_part=""
 [ -n "$cost" ] && cost_part="${c_text}$(printf '$%.2f' "$cost")${c_reset}"
 
+# --- 4. account initials ---
+# Which account this is, shortened to the initials of its display name: K,
+# JG, JG2. The payload carries no identity at all, so it comes from the config
+# directory the session was launched with - clc points CLAUDE_CONFIG_DIR at an
+# account, and each one keeps its own .claude.json inside it, while the default
+# account is the one that leaves the variable unset and keeps that file in
+# $HOME. Signed out, or signed in under no name, yields nothing and the segment
+# disappears rather than standing there empty.
+account_json="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+initials=""
+if [ -r "$account_json" ]; then
+    initials="$(jq -r '[(.oauthAccount.displayName // "") | splits("[[:space:]]+")]
+        | map(select(. != "") | .[0:1]) | add // "" | ascii_upcase' \
+        "$account_json" 2>/dev/null || true)"
+fi
+
 # --- assemble ---
 parts=("$location" "${c_model}${model}${c_reset}")
 [ ${#meters[@]} -gt 0 ] && parts+=("${meters[*]}")
 [ -n "$cost_part" ] && parts+=("$cost_part")
+[ -n "$initials" ] && parts+=("${c_account}${initials}${c_reset}")
 
 sep=" ${c_dim}|${c_reset} "
 out=""

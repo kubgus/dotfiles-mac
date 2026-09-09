@@ -67,6 +67,9 @@ no second name to keep in step. `clc add kubo@example.com` creates one and
 signs it in - the address has to be known up front, because renaming the
 directory afterwards would orphan the credentials keyed on it. The accounts
 are machine-local and untracked; this repo holds the command, not the logins.
+The status line names the live account by the initials of its display name, and
+reads `CLAUDE_CONFIG_DIR` to find it exactly as `clc` sets it, so the two cannot
+drift apart.
 
 **The switch is meant not to be felt, which is a denylist, not an allowlist.**
 Every entry in `~/.claude` is symlinked into each account except the few that
