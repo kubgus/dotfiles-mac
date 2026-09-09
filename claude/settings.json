@@ -1,55 +1,53 @@
 {
-  "permissions": {
-    "defaultMode": "auto"
-  },
-  "model": "opus[1m]",
+  "agentPushNotifEnabled": true,
+  "editorMode": "vim",
   "hooks": {
     "PermissionRequest": [
       {
-        "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &"
+            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &",
+            "type": "command"
           },
           {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/bell.sh\""
+            "command": "bash \"$HOME/.claude/bell.sh\"",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": ""
       }
     ],
     "Stop": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &"
+            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &",
+            "type": "command"
           },
           {
-            "type": "command",
-            "command": "bash \"$HOME/.claude/bell.sh\""
+            "command": "bash \"$HOME/.claude/bell.sh\"",
+            "type": "command"
           }
         ]
       }
     ]
   },
-  "worktree": {
-    "baseRef": "fresh"
+  "inputNeededNotifEnabled": true,
+  "permissions": {
+    "defaultMode": "auto"
   },
+  "preferredNotifChannel": "notifications_disabled",
+  "skipWorkflowUsageWarning": true,
   "statusLine": {
-    "type": "command",
-    "command": "bash \"$HOME/.claude/statusline.sh\""
+    "command": "bash \"$HOME/.claude/statusline.sh\"",
+    "type": "command"
   },
-  "effortLevel": "high",
   "voice": {
     "enabled": true,
     "mode": "hold"
   },
-  "skipWorkflowUsageWarning": true,
-  "editorMode": "vim",
-  "preferredNotifChannel": "notifications_disabled",
-  "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "worktree": {
+    "baseRef": "fresh"
+  }
 }

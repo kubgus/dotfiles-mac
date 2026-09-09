@@ -56,6 +56,32 @@ so anything not whitelisted still works locally, it just isn't tracked.
 session state, telemetry and caches. Only the portable files are tracked;
 `auth.json`, `sessions/` and `npm/` stay machine-local.
 
+**`/model` and `/effort` are not repo changes.** Claude Code writes the live
+model and reasoning effort back into `settings.json`, and that file is this
+repo's by symlink, so every switch used to surface as a working-tree diff. A
+`clean` filter, declared in `.gitattributes` and pointed at
+`claude/settings-clean.sh`, drops `model` and `effortLevel` on the way into git
+and re-emits the rest at a fixed indent with sorted keys - the working file
+keeps everything, the commit never sees those two, and neither does a reindent
+by Claude Code's own in-place editor. The blob is a projection of the file
+rather than a copy of it, which is the price of the whole thing being quiet.
+Registering the filter is `_setup/claude.sh`'s job because git refuses to read
+filter definitions out of the repository that ships them; they run arbitrary
+commands. That refusal is silent, so on a clone that has not been set up yet,
+staging the file commits both keys - run `./_setup.sh claude` first. Once
+registered it is marked `required`, so a filter that breaks fails the stage
+loudly instead of quietly committing more than it should.
+
+The quiet is not total. `git diff` and `git commit` see nothing after a switch,
+but `git status` still can: git skips the filter outright when a file's byte
+length has changed, so a model name of a different length shows as a phantom
+modification - dirty marker in the status line included - until the next
+`git add` clears it. It never becomes a commit; there is no content there to
+commit. The other edge is that the blob is the stripped form, so
+`git checkout -- claude/settings.json` hands back a file without the two keys.
+Claude Code falls back to its defaults and writes them again on the next
+switch, so it costs a preference rather than a working config.
+
 **`clc` switches Claude Code accounts by moving `CLAUDE_CONFIG_DIR`.**
 Claude Code derives its Keychain item from a hash of that path, so pointing the
 variable at `~/.claude-accounts/<email>` is the entire account switch - no
