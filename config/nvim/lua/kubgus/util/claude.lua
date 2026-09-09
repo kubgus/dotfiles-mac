@@ -85,4 +85,28 @@ function M.copy_range()
   put(reference(take_selection()))
 end
 
+-- The reference and the lines themselves, for a question that is easier to ask
+-- with the code in front of it than with a pointer to it. The fence is grown
+-- past the longest backtick run in the selection, so copying a markdown file
+-- cannot close the block early.
+function M.copy_range_with_lines()
+  local first, last = take_selection()
+  local ref = reference(first, last)
+  if not ref then
+    return
+  end
+
+  local body = table.concat(vim.api.nvim_buf_get_lines(0, first - 1, last, false), "\n")
+  local longest = 0
+  for run in body:gmatch("`+") do
+    longest = math.max(longest, #run)
+  end
+  local fence = string.rep("`", math.max(3, longest + 1))
+
+  put(
+    table.concat({ ref, "", fence .. vim.bo.filetype, body, fence }, "\n"),
+    ref .. " with " .. (last - first + 1) .. " lines"
+  )
+end
+
 return M

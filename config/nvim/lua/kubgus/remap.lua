@@ -38,9 +38,13 @@ vim.keymap.set({"n", "v"}, "<leader>d", "\"_d")
 vim.keymap.set("n", "<leader>mc", richtext.copy_buffer, { desc = "Copy buffer as rich text" })
 vim.keymap.set("v", "<leader>mc", richtext.copy_selection, { desc = "Copy selection as rich text" })
 
--- Copy a Claude Code @-reference to this file, for pasting into a prompt
+-- Copy a Claude Code @-reference to this file, for pasting into a prompt.
+-- Capitalised, the selected lines ride along with it; in normal mode, where
+-- there is no selection to send, the two are the same.
 vim.keymap.set("n", "<leader>ac", claude.copy_reference, { desc = "Copy Claude reference to this file" })
 vim.keymap.set("v", "<leader>ac", claude.copy_range, { desc = "Copy Claude reference to the selected lines" })
+vim.keymap.set("n", "<leader>aC", claude.copy_reference, { desc = "Copy Claude reference to this file" })
+vim.keymap.set("v", "<leader>aC", claude.copy_range_with_lines, { desc = "Copy Claude reference and the selected lines" })
 
 -- This is going to get me cancelled
 --vim.keymap.set("i", "<C-c>", "<Esc>")
