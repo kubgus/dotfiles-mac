@@ -76,6 +76,51 @@ vim.keymap.set("v", "<leader>mc", function()
   copy_as_rich_text(vim.fn.getreg("r"))
 end, { desc = "Copy selection as rich text" })
 
+-- Copy a Claude Code @-reference to the current file. Visual mode appends the
+-- selected line range in the #L<start>-<end> form Claude parses; a one-line
+-- selection drops the second half.
+local function copy_claude_reference(first, last)
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    vim.notify("Buffer has no file to reference", vim.log.levels.ERROR)
+    return
+  end
+
+  -- Claude resolves @-paths against its own cwd, so a cwd-relative path is the
+  -- useful spelling. Try the buffer name and its symlink target and keep
+  -- whichever lands inside the cwd: reaching a dotfile through ~/.config finds
+  -- it under a name that does not, and the repo it really lives in is where
+  -- Claude is running. fnamemodify returns the absolute path unchanged when it
+  -- cannot relativise, so the shorter of the two is the one that worked.
+  local ref = path
+  for _, candidate in ipairs({ path, vim.fn.resolve(path) }) do
+    local rel = vim.fn.fnamemodify(candidate, ":.")
+    if #rel < #ref then
+      ref = rel
+    end
+  end
+
+  if first then
+    ref = ref .. "#L" .. first .. (last > first and "-" .. last or "")
+  end
+
+  ref = "@" .. ref
+  vim.fn.setreg("+", ref)
+  vim.notify("Copied " .. ref)
+end
+
+vim.keymap.set("n", "<leader>ac", function()
+  copy_claude_reference()
+end, { desc = "Copy Claude reference to this file" })
+
+vim.keymap.set("v", "<leader>ac", function()
+  -- '< and '> only settle on leaving visual mode, and a Lua callback mapping
+  -- behaves like <Cmd> and never leaves it, so read the live anchor and cursor.
+  local first, last = vim.fn.line("v"), vim.fn.line(".")
+  vim.cmd("normal! \27") -- drop the selection, the way a yank would
+  copy_claude_reference(math.min(first, last), math.max(first, last))
+end, { desc = "Copy Claude reference to the selected lines" })
+
 -- This is going to get me cancelled
 --vim.keymap.set("i", "<C-c>", "<Esc>")
 
