@@ -15,12 +15,7 @@ local M = {}
 -- under a name that does not, and the repo it really lives in is where Claude
 -- is running. fnamemodify hands back the absolute path unchanged when it cannot
 -- relativise, so the shorter of the two is the one that worked.
-local function buffer_path()
-  local path = vim.api.nvim_buf_get_name(0)
-  if path == "" then
-    return nil
-  end
-
+local function shortest_spelling(path)
   local best = path
   for _, candidate in ipairs({ path, vim.fn.resolve(path) }) do
     local rel = vim.fn.fnamemodify(candidate, ":.")
@@ -45,18 +40,29 @@ local function quote(path)
   return '"' .. path .. '"'
 end
 
--- Nil when the buffer has no file behind it, having said why.
-local function reference(first, last)
-  local path = buffer_path()
-  if not path then
-    vim.notify("Buffer has no file to reference", vim.log.levels.ERROR)
+-- Nil when there is nothing to point at, having said so.
+local function reference(path, first, last)
+  if path == nil or path == "" then
+    vim.notify("Nothing here to reference", vim.log.levels.ERROR)
     return nil
   end
 
+  local ref = shortest_spelling(path)
   if first then
-    path = path .. "#L" .. first .. (last > first and "-" .. last or "")
+    ref = ref .. "#L" .. first .. (last > first and "-" .. last or "")
   end
-  return "@" .. quote(path)
+  return "@" .. quote(ref)
+end
+
+-- The file behind the current buffer, or nil when there is not one. Everything
+-- that is not a file carries a buftype, and several of those are named after
+-- the window rather than a path - a nvim-tree listing is NvimTree_1 - so
+-- without this they would reference a file that does not exist.
+local function current_file()
+  if vim.bo.buftype ~= "" then
+    return nil
+  end
+  return vim.api.nvim_buf_get_name(0)
 end
 
 -- The lines the visual selection covers, ordered, and the selection dropped the
@@ -78,11 +84,18 @@ local function put(text, shown)
 end
 
 function M.copy_reference()
-  put(reference())
+  put(reference(current_file()))
 end
 
 function M.copy_range()
-  put(reference(take_selection()))
+  put(reference(current_file(), take_selection()))
+end
+
+-- For somewhere that knows a path the buffer does not, such as the node under
+-- the cursor in a file tree. Directories are as referenceable as files: Claude
+-- stats the path and lists it rather than reading it.
+function M.copy_path(path)
+  put(reference(path))
 end
 
 -- The reference and the lines themselves, for a question that is easier to ask
@@ -91,7 +104,7 @@ end
 -- cannot close the block early.
 function M.copy_range_with_lines()
   local first, last = take_selection()
-  local ref = reference(first, last)
+  local ref = reference(current_file(), first, last)
   if not ref then
     return
   end
