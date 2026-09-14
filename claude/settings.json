@@ -6,7 +6,7 @@
       {
         "hooks": [
           {
-            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &",
+            "command": "[ -f $HOME/.claude/mute ] || bash \"$HOME/.claude/duck-play.sh\" /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &",
             "type": "command"
           },
           {
@@ -21,7 +21,7 @@
       {
         "hooks": [
           {
-            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &",
+            "command": "[ -f $HOME/.claude/mute ] || bash \"$HOME/.claude/duck-play.sh\" /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &",
             "type": "command"
           },
           {
