@@ -4,9 +4,16 @@
 #
 # /model and /effort persist the live choice straight into the settings file,
 # and that file is this repo's by symlink, so switching model used to register
-# as a working-tree change. Those two keys are session state, not configuration,
-# so git is never shown them: the working file keeps them, the blob does not,
-# and a commit taken after a day of switching models is empty.
+# as a working-tree change. Those keys are session state, not configuration, so
+# git is never shown them: the working file keeps them, the blob does not, and a
+# commit taken after a day of switching models is empty.
+#
+# /effort writes twice - once to a top-level effortLevel and once under
+# modelSettings, keyed by the model it was chosen for - so both have to go. The
+# key itself is session state too: leaving an emptied entry behind would put the
+# model's name in the blob and make the first effort change on a new model read
+# as an edit, so an entry holding nothing else is dropped, and modelSettings
+# with it once nothing is left.
 #
 # The rest is normalised rather than passed through. Claude Code edits the file
 # in place and indents what it inserts with four spaces where the file uses two,
@@ -26,4 +33,12 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-jq -S --indent 2 'del(.model, .effortLevel)'
+jq -S --indent 2 '
+  del(.model, .effortLevel)
+  | .modelSettings = (
+      (.modelSettings // {})
+      | map_values(del(.effortLevel))
+      | with_entries(select(.value != {}))
+    )
+  | if .modelSettings == {} then del(.modelSettings) else . end
+'
