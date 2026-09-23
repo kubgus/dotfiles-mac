@@ -1,0 +1,94 @@
+#!/bin/bash
+# Disables system sleep until this script is interrupted (Ctrl-C) or its
+# terminal is closed, then re-enables sleep automatically. While disabled, it
+# chimes every $interval as a "still awake" nudge, and plays a distinct sound
+# once sleep is restored.
+#
+# --test drops the reminder interval to 10s for quick verification.
+set -euo pipefail
+
+# Re-exec as real root (once, up front) instead of calling `sudo pmset` as
+# needed: a cached sudo timestamp can expire over a multi-hour run, and the
+# exit trap may fire with no TTY left to reauthenticate on (e.g. the terminal
+# closed and sent SIGHUP). Being root for the whole process lifetime removes
+# both failure modes.
+if [[ $EUID -ne 0 ]]; then
+    exec sudo "$0" "$@"
+fi
+
+REMINDER_SOUND="/System/Library/Sounds/Ping.aiff"
+RESTORED_SOUND="/System/Library/Sounds/Purr.aiff"
+VOLUME=1
+interval=600
+
+# Chimes play in the background, so that a signal arriving mid-chime is acted
+# on at once (bash defers a trap until the foreground command returns) and the
+# restore sound can layer over a chime still in progress rather than queueing
+# behind it. The subshell ignores the stop signals before exec'ing afplay:
+# SIG_IGN survives exec, and without it the tty's process-group signal would
+# cut the chime short on terminal close, leaving nothing left to play over.
+chime() {
+    ( trap '' INT TERM HUP; exec afplay -v "$VOLUME" "$1" ) &
+}
+
+chime "$REMINDER_SOUND"
+
+if [[ "${1-}" == "--test" ]]; then
+    interval=10
+fi
+
+# Runs from both the INT/TERM/HUP handler and the EXIT fallback trap; the
+# INT/TERM/HUP handler unsets the EXIT trap first so this never fires twice.
+restore_sleep() {
+    [[ -n "$sleep_pid" ]] && kill "$sleep_pid" 2>/dev/null
+    # Restore first, make noise second, and never the other way round: the
+    # teardown that triggers this can kill the script mid-sound, and anything
+    # sequenced after the sound is then simply never reached - which would
+    # leave sleep disabled with no process left to re-enable it. The sound is
+    # a confirmation; only losing the pmset actually matters.
+    pmset -a disablesleep 0
+    afplay -v "$VOLUME" "$RESTORED_SOUND"
+}
+sleep_pid=""
+trap restore_sleep EXIT
+trap 'trap - EXIT; restore_sleep; exit 130' INT TERM HUP
+
+pmset -a disablesleep 1
+
+echo -e "\033[31m"
+echo "Sleep disabled. Ctrl-C (or close this terminal) to re-enable."
+echo -e "\033[0m"
+
+POLL=2
+
+# Waits out one interval, in POLL-sized steps. Two separate hazards force this
+# shape.
+#
+# The sleep is backgrounded and awaited because bash defers a trap handler
+# until the foreground command returns, so a foreground `sleep 600` would sit
+# on a signal for up to the full interval. `wait` is interruptible, so Ctrl-C
+# and `kill` both land promptly.
+#
+# The wait is then stepped rather than taken in one go because closing the
+# terminal delivers no signal here at all: sudo sits between this script and
+# the tty, and dies without forwarding, leaving this orphaned with sleep still
+# disabled. Reparenting to PID 1 is the tell, and it has to be polled for -
+# bash's own $PPID is captured at startup and never updates to reflect it.
+wait_interval() {
+    local waited=0
+    while (( waited < interval )); do
+        sleep "$POLL" &
+        sleep_pid=$!
+        wait "$sleep_pid" || true
+        sleep_pid=""
+        if [[ "$(ps -o ppid= -p $$ | tr -d ' ')" == "1" ]]; then
+            exit 0
+        fi
+        waited=$(( waited + POLL ))
+    done
+}
+
+while true; do
+    wait_interval
+    chime "$REMINDER_SOUND"
+done
