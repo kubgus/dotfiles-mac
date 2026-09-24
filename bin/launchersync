@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+# Folder where you organize your apps (edit this path if you want a different location)
+ORG_FOLDER="$HOME/Launcher"
+
+mkdir -p "$ORG_FOLDER"
+
+# Build a list of app names that already have an alias somewhere inside ORG_FOLDER (recursively)
+EXISTING=$(find "$ORG_FOLDER" -iname "*.app" -exec basename {} \;)
+
+# Ask Spotlight's index for every installed app bundle, wherever it actually lives
+mdfind "kMDItemContentType == 'com.apple.application-bundle'" | while read -r APP_PATH; do
+  APP_NAME=$(basename "$APP_PATH")
+
+  if echo "$EXISTING" | grep -Fxq "$APP_NAME"; then
+    continue
+  fi
+
+  osascript -e "tell application \"Finder\" to make alias file to POSIX file \"$APP_PATH\" at POSIX file \"$ORG_FOLDER\"" > /dev/null
+
+  echo "Added: $APP_NAME"
+done
+
+echo "Done. New apps were added to $ORG_FOLDER. Sort them into subfolders any time; re-running this script will skip anything already filed."
