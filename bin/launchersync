@@ -5,7 +5,7 @@ set -euo pipefail
 ORG_FOLDER="$HOME/Launcher"
 
 # Locations macOS commonly installs apps to
-SEARCH_PATHS=("/Applications" "$HOME/Applications")
+SEARCH_PATHS=("/Applications" "$HOME")
 
 mkdir -p "$ORG_FOLDER"
 
