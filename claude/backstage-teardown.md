@@ -21,9 +21,12 @@ by content hash, the remaining two recoverable from git at Block's own HEAD, and
 Block's HEAD an ancestor of the Mac's. Only the archived stack remains on Block.
 
 The 28 restic snapshots at `rclone:gdrive:Backups/backstage` are a frozen copy of the
-old Block tree, not a running backup. Their password is in the password manager and in
-`~/Archive/backstage/backup-state/repo.password`; lose it and they are unrecoverable by
-any means. Day to day the Mac copy rides on iCloud, which is the backup story now.
+old Block tree, not a running backup. Their password is in the password manager and
+nowhere else since 2026-09-25, when the on-disk copy at
+`~/Archive/backstage/backup-state/repo.password` was deleted; lose that entry and they
+are unrecoverable by any means. `stack/backup/backup.sh`, `stack/compose.yaml` and the
+archive's own README still name the file, so a restore has to supply it by hand. Day to
+day the Mac copy rides on iCloud, which is the backup story now.
 
 ## What was removed
 
