@@ -16,62 +16,74 @@ personal_name="Jakub Guštafik"
 # shellcheck disable=SC2034
 personal_email="mail@gustafik.com"
 
+prog="${0##*/}"
+
+die() {
+    echo "$prog: $1" >&2
+    exit 1
+}
+
+usage() {
+    echo "usage: $prog [-g]"
+    echo "  -g    write to ~/.gitconfig instead of this repository"
+}
+
 # --local is already git's default write target, so naming it explicitly changes
 # no behaviour - it just means "$scope" is always a single word and can stay
 # quoted, rather than being an empty string that has to word-split away.
 scope="--local"
 target="local (this repository)"
 
-# Parse flags. The leading colon makes getopts silent, which is what puts the
-# offending character in OPTARG - without it bash prints its own message and
-# leaves OPTARG unset, and under set -u that is a crash rather than a complaint.
-while getopts ":g" opt; do
-  case $opt in
-    g)
-      scope="--global"
-      target="global (~/.gitconfig)"
-      ;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2
-      exit 1
-      ;;
-  esac
+# getopts handles single letters only, and stops dead at a leading `--`, so the
+# long form is matched before it rather than inside it.
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+esac
+
+# The leading colon makes getopts silent, which is what puts the offending
+# character in OPTARG - without it bash prints its own message and leaves
+# OPTARG unset, and under set -u that is a crash rather than a complaint.
+while getopts ":gh" opt; do
+    case $opt in
+        g)
+            scope="--global"
+            target="global (~/.gitconfig)"
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        \?)
+            usage >&2
+            die "invalid option: -$OPTARG"
+            ;;
+    esac
 done
-
-# Shift off the options so they don't interfere with other arguments
 shift $((OPTIND - 1))
-
-# ========================================================
 
 echo "Targeting: $target"
 # Ctrl-D at the prompt is a deliberate abort, not a missing credential set.
 if ! read -rp "Select credentials to use (personal/...): " choice; then
-    echo "Aborted." >&2
-    exit 1
+    die "aborted"
 fi
 
-# Validate input exists
 name_var="${choice}_name"
 email_var="${choice}_email"
 
 # The -} default is load-bearing: under set -u a bare ${!name_var} on a key
 # that has no pair aborts with "unbound variable" instead of reaching the
 # message below.
-if [[ -z "${!name_var-}" ]]; then
-    echo "Error: Credentials for '${choice}' not found." >&2
-    exit 1
-fi
+[ -n "${!name_var-}" ] || die "no credentials for '$choice'"
 
-# Use indirect expansion to get values
 name="${!name_var}"
 email="${!email_var}"
 
-echo "Configuring git ($target) with '${choice}' credentials..."
+echo "Configuring git ($target) with '$choice' credentials..."
 
-echo "Setting user.name to '${name}'"
+echo "Setting user.name to '$name'"
 git config "$scope" user.name "$name"
 
-echo "Setting user.email to '${email}'"
+echo "Setting user.email to '$email'"
 git config "$scope" user.email "$email"
 
 echo "Done!"

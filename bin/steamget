@@ -1,43 +1,50 @@
-#!/usr/bin/env bash
+#!/bin/bash
+# Install a Steam game's macOS build with the native (Homebrew) steamcmd, so
+# no Steam client is needed to install it or to launch it afterwards.
 #
-# steamget <appid>
+# The AppID names the install directory, so what is under ~/Games matches what
+# Steam calls the game and the same game cannot land twice under two names:
 #
-# Installs a Steam game's macOS build using the native (Homebrew) steamcmd,
-# so no Steam client is needed to install or later launch the game.
+#   steamget 646570    installs to ~/Games/646570
 #
-# The AppID names the install directory, so ~/Games matches what Steam calls
-# the game and a second copy of the same game cannot land beside the first:
-#
-#   steamget 646570    # installs to ~/Games/646570
-#
-# The Steam account is read from $STEAM_USERNAME and asked for when unset, so
-# the name stays out of the repo. First run will also prompt for your password
-# and, most likely, a Steam Guard code sent to your email or Steam Mobile app.
-
+# The Steam account comes from $STEAM_USERNAME and is asked for when unset, so
+# the name stays out of the repo. A first run also prompts for the password
+# and, most likely, a Steam Guard code sent to email or the Steam mobile app.
 set -euo pipefail
 
-STEAM_USERNAME="${STEAM_USERNAME:-}"
 GAMES_DIR="$HOME/Games"
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <appid>"
-  exit 1
+prog="${0##*/}"
+
+die() {
+    echo "$prog: $1" >&2
+    exit 1
+}
+
+usage() {
+    echo "usage: $prog <appid>"
+    echo "  appid    the game's Steam AppID, which also names the install dir"
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+esac
+
+[ $# -eq 1 ] || { usage >&2; exit 1; }
+
+command -v steamcmd >/dev/null 2>&1 \
+    || die "steamcmd not found - install it with: brew install steamcmd"
+
+steam_username="${STEAM_USERNAME:-}"
+if [ -z "$steam_username" ]; then
+    read -r -p "Steam username: " steam_username
+    [ -n "$steam_username" ] || die "no username given"
 fi
 
-if ! command -v steamcmd >/dev/null 2>&1; then
-  echo "steamcmd not found. Install it first with: brew install steamcmd"
-  exit 1
-fi
+appid="$1"
+install_dir="$GAMES_DIR/$appid"
 
-if [ -z "$STEAM_USERNAME" ]; then
-  read -r -p "Steam username: " STEAM_USERNAME
-  [ -n "$STEAM_USERNAME" ] || { echo "No username given."; exit 1; }
-fi
-
-APPID="$1"
-INSTALL_DIR="$GAMES_DIR/$APPID"
-
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$install_dir"
 
 # Clear the quarantine flag on steamcmd's own files and its data directory.
 # Without this, macOS Gatekeeper can pop up "damaged and can't be opened"
@@ -45,29 +52,29 @@ mkdir -p "$INSTALL_DIR"
 xattr -rd com.apple.quarantine /opt/homebrew/Caskroom/steamcmd 2>/dev/null || true
 xattr -rd com.apple.quarantine "$HOME/Library/Application Support/Steam" 2>/dev/null || true
 
-echo "Installing AppID $APPID (macOS build) into: $INSTALL_DIR"
+echo "Installing AppID $appid (macOS build) into: $install_dir"
 echo
 
 steamcmd \
-  +@sSteamCmdForcePlatformType macos \
-  +force_install_dir "$INSTALL_DIR" \
-  +login "$STEAM_USERNAME" \
-  +app_update "$APPID" validate \
-  +quit
+    +@sSteamCmdForcePlatformType macos \
+    +force_install_dir "$install_dir" \
+    +login "$steam_username" \
+    +app_update "$appid" validate \
+    +quit
 
-# Make sure any .app bundle produced is executable.
-find "$INSTALL_DIR" -maxdepth 1 -iname "*.app" -print0 2>/dev/null \
-  | while IFS= read -r -d '' app; do
-      chmod -R +x "$app/Contents/MacOS" 2>/dev/null || true
+# Whatever bundle came out of that, make sure it can actually be launched.
+find "$install_dir" -maxdepth 1 -iname "*.app" -print0 2>/dev/null \
+    | while IFS= read -r -d '' app; do
+        chmod -R +x "$app/Contents/MacOS" 2>/dev/null || true
     done
 
 echo
-echo "Done. Files are in: $INSTALL_DIR"
+echo "Done. Files are in: $install_dir"
 
-APP_BUNDLE=$(find "$INSTALL_DIR" -maxdepth 1 -iname "*.app" 2>/dev/null | head -n 1)
-if [ -n "$APP_BUNDLE" ]; then
-  echo "Launch with:"
-  echo "  open \"$APP_BUNDLE\""
+app_bundle=$(find "$install_dir" -maxdepth 1 -iname "*.app" 2>/dev/null | head -n 1)
+if [ -n "$app_bundle" ]; then
+    echo "Launch with:"
+    echo "  open \"$app_bundle\""
 else
-  echo "No .app bundle found at the top level — check $INSTALL_DIR for the game's executable."
+    echo "No .app bundle at the top level - look in $install_dir for the game's executable."
 fi

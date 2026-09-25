@@ -1,11 +1,27 @@
 #!/bin/bash
-# Disables system sleep until this script is interrupted (Ctrl-C) or its
-# terminal is closed, then re-enables sleep automatically. While disabled, it
+# Disable system sleep until this script is interrupted (Ctrl-C) or its
+# terminal is closed, then re-enable sleep automatically. While disabled, it
 # chimes every $interval as a "still awake" nudge, and plays a distinct sound
 # once sleep is restored.
-#
-# --test drops the reminder interval to 10s for quick verification.
 set -euo pipefail
+
+prog="${0##*/}"
+
+usage() {
+    echo "usage: $prog [--test]"
+    echo "  --test    drop the reminder interval to 10s, to check it works"
+}
+
+interval=600
+
+# Parsed before the re-exec below, so that asking for help does not ask for a
+# password first.
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+    --test) interval=10 ;;
+    "") ;;
+    *) usage >&2; echo "$prog: unknown option: $1" >&2; exit 1 ;;
+esac
 
 # Re-exec as real root (once, up front) instead of calling `sudo pmset` as
 # needed: a cached sudo timestamp can expire over a multi-hour run, and the
@@ -19,7 +35,6 @@ fi
 REMINDER_SOUND="/System/Library/Sounds/Ping.aiff"
 RESTORED_SOUND="/System/Library/Sounds/Purr.aiff"
 VOLUME=1
-interval=600
 
 # Chimes play in the background, so that a signal arriving mid-chime is acted
 # on at once (bash defers a trap until the foreground command returns) and the
@@ -32,10 +47,6 @@ chime() {
 }
 
 chime "$REMINDER_SOUND"
-
-if [[ "${1-}" == "--test" ]]; then
-    interval=10
-fi
 
 # Runs from both the INT/TERM/HUP handler and the EXIT fallback trap; the
 # INT/TERM/HUP handler unsets the EXIT trap first so this never fires twice.

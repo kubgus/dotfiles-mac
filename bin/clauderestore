@@ -1,125 +1,147 @@
-#!/usr/bin/env bash
-# clauderestore
-# Make ALL Claude Code desktop sessions ever created on this device appear under
-# the CURRENTLY logged-in account (any new Claude id).
+#!/bin/bash
+# Make every Claude Code desktop session ever created on this device show up
+# under the account that is currently logged in.
 #
-# Why needed: the Claude desktop "Code" Recents list is scoped per Anthropic
-# account. Sessions are stored as thin pointer files:
-#   ~/Library/Application Support/Claude/claude-code-sessions/<accountUuid>/<workspaceUuid>/local_<uuid>.json
-# each pointing at a CLI transcript in ~/.claude/projects/. Switching login hides
-# sessions made under the old account. This script copies every account's pointer
-# files into the current account's active workspace so they all list again.
+# The desktop app's "Code" recents list is scoped per Anthropic account. The
+# sessions themselves are CLI transcripts under ~/.claude/projects/; what the
+# app lists are thin pointer files at
+#   ~/Library/Application Support/Claude/claude-code-sessions/<account>/<workspace>/local_<uuid>.json
+# so switching login does not move anything, it just stops the old account's
+# pointers being read. This copies every other account's pointers into the
+# current account's active workspace, and the whole history lists again.
 #
-# Non-destructive: originals under other accounts are untouched; the current
-# account's dir is backed up first. Reversible via the printed backup path.
+# Non-destructive: the originals under the other accounts are untouched and the
+# current account's directory is backed up first, to the path it prints.
 #
-# Usage:
-#   clauderestore            # dry-run: show what would be copied
-#   clauderestore --apply    # perform the copy (after backup)
-#   clauderestore --apply --account <uuid>   # force target account (default = logged-in)
+#   clauderestore                            dry run: show what would be copied
+#   clauderestore --apply                    copy, after taking the backup
+#   clauderestore --apply --account <uuid>   target an account explicitly
 #
-# After --apply: FULLY QUIT Claude (Cmd+Q) and reopen — the list is cached in memory.
+# After --apply, fully quit Claude (Cmd-Q) and reopen it: the list is cached in
+# memory and will not pick the new pointers up on its own.
+#
 # Bash 3.2 compatible (macOS default). No associative arrays. Space-safe paths.
-
 set -euo pipefail
 
 SUP="$HOME/Library/Application Support/Claude"
 STORE="$SUP/claude-code-sessions"
 CFG="$SUP/config.json"
 
-APPLY=0
-FORCE_ACCT=""
+prog="${0##*/}"
+
+die() {
+    echo "$prog: $1" >&2
+    exit 1
+}
+
+usage() {
+    echo "usage: $prog [--apply] [--account <uuid>]"
+    echo "  --apply            copy the pointers; without it, only report"
+    echo "  --account <uuid>   target this account instead of the logged-in one"
+}
+
+apply=0
+force_account=""
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --apply) APPLY=1 ;;
-    --account) shift; FORCE_ACCT="${1:-}" ;;
-    *) echo "unknown arg: $1" >&2; exit 2 ;;
-  esac
-  shift
+    case "$1" in
+        --apply) apply=1 ;;
+        --account) shift; force_account="${1:-}" ;;
+        -h|--help) usage; exit 0 ;;
+        *) usage >&2; die "unknown argument: $1" ;;
+    esac
+    shift
 done
 
-[ -d "$STORE" ] || { echo "ERROR: desktop session store not found: $STORE"; echo "Is the Claude desktop app installed?"; exit 1; }
-command -v jq >/dev/null || { echo "ERROR: jq required."; exit 1; }
+[ -d "$STORE" ] || die "no desktop session store at $STORE - is the desktop app installed?"
+command -v jq >/dev/null || die "jq is required"
 
 # --- current logged-in account ---
-if [ -n "$FORCE_ACCT" ]; then
-  CUR="$FORCE_ACCT"
+if [ -n "$force_account" ]; then
+    current="$force_account"
 else
-  CUR="$(jq -r '.lastKnownAccountUuid // empty' "$CFG" 2>/dev/null || true)"
+    current="$(jq -r '.lastKnownAccountUuid // empty' "$CFG" 2>/dev/null || true)"
 fi
-[ -n "$CUR" ] || { echo "ERROR: could not determine current account (lastKnownAccountUuid empty). Log into the desktop app first, or pass --account <uuid>."; exit 1; }
-[ -d "$STORE/$CUR" ] || { echo "ERROR: current account '$CUR' has no session dir yet."; echo "Open the desktop app -> Code tab once (start any session), then rerun."; exit 1; }
+[ -n "$current" ] || die "could not determine the current account - log into the desktop app, or pass --account <uuid>"
+[ -d "$STORE/$current" ] || die "account '$current' has no session dir yet - open the desktop app's Code tab once, then rerun"
 
-# --- pick active workspace under current account = dir with newest pointer file ---
-# space-safe: only numeric mtimes are compared; paths stay quoted.
-TARGET_WS=""
+# --- pick the active workspace under that account: the one with the newest pointer ---
+# Space-safe: only numeric mtimes are compared, and every path stays quoted.
+target_ws=""
 best_mtime=-1
 while IFS= read -r ws; do
-  [ -d "$ws" ] || continue
-  # newest local_*.json mtime in this workspace (0 if none)
-  m=0
-  while IFS= read -r pf; do
-    [ -f "$pf" ] || continue
-    t="$(stat -f '%m' "$pf" 2>/dev/null || echo 0)"
-    [ "$t" -gt "$m" ] && m="$t"
-  done < <(find "$ws" -maxdepth 1 -name 'local_*.json' 2>/dev/null)
-  # prefer the workspace with newest pointer; if all empty, still remember one
-  if [ "$m" -gt "$best_mtime" ]; then best_mtime="$m"; TARGET_WS="$ws"; fi
-done < <(find "$STORE/$CUR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+    [ -d "$ws" ] || continue
+    # newest local_*.json mtime in this workspace (0 if none)
+    newest=0
+    while IFS= read -r pointer; do
+        [ -f "$pointer" ] || continue
+        mtime="$(stat -f '%m' "$pointer" 2>/dev/null || echo 0)"
+        [ "$mtime" -gt "$newest" ] && newest="$mtime"
+    done < <(find "$ws" -maxdepth 1 -name 'local_*.json' 2>/dev/null)
+    # prefer the workspace with the newest pointer; if all are empty, keep one anyway
+    if [ "$newest" -gt "$best_mtime" ]; then
+        best_mtime="$newest"
+        target_ws="$ws"
+    fi
+done < <(find "$STORE/$current" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
 
-[ -n "$TARGET_WS" ] && [ -d "$TARGET_WS" ] || { echo "ERROR: current account has no workspace dir."; echo "Open the desktop app -> Code tab once, then rerun."; exit 1; }
+[ -n "$target_ws" ] && [ -d "$target_ws" ] \
+    || die "the current account has no workspace dir - open the desktop app's Code tab once, then rerun"
 
-echo "Current account : $CUR"
-echo "Active workspace: $(basename "$TARGET_WS")"
+echo "Current account : $current"
+echo "Active workspace: $(basename "$target_ws")"
 echo "Store           : $STORE"
 echo
 
-# --- build list of source pointer files from OTHER accounts, dedup by basename ---
-TARGET_LIST="$(mktemp)"   # basenames already in target
-SEEN_LIST="$(mktemp)"     # basenames queued this run
-SRC_LIST="$(mktemp)"      # full source paths to copy
-trap 'rm -f "$TARGET_LIST" "$SEEN_LIST" "$SRC_LIST"' EXIT
+# --- collect the pointers held by the other accounts, deduplicated by basename ---
+target_list="$(mktemp)"   # basenames already in the target workspace
+seen_list="$(mktemp)"     # basenames queued by this run
+src_list="$(mktemp)"      # full source paths to copy
+trap 'rm -f "$target_list" "$seen_list" "$src_list"' EXIT
 
-find "$TARGET_WS" -maxdepth 1 -name 'local_*.json' -exec basename {} \; 2>/dev/null | sort -u > "$TARGET_LIST"
+find "$target_ws" -maxdepth 1 -name 'local_*.json' -exec basename {} \; 2>/dev/null \
+    | sort -u > "$target_list"
 
-total_src=0; copy_count=0; skip_count=0
-while IFS= read -r f; do
-  [ -f "$f" ] || continue
-  total_src=$((total_src+1))
-  b="$(basename "$f")"
-  if grep -Fxq "$b" "$TARGET_LIST" || grep -Fxq "$b" "$SEEN_LIST"; then
-    skip_count=$((skip_count+1)); continue
-  fi
-  echo "$b" >> "$SEEN_LIST"
-  echo "$f" >> "$SRC_LIST"
-  copy_count=$((copy_count+1))
-done < <(find "$STORE" -mindepth 3 -maxdepth 3 -name 'local_*.json' -not -path "$STORE/$CUR/*" 2>/dev/null)
+total=0
+queued=0
+skipped=0
+while IFS= read -r pointer; do
+    [ -f "$pointer" ] || continue
+    total=$((total + 1))
+    name="$(basename "$pointer")"
+    if grep -Fxq "$name" "$target_list" || grep -Fxq "$name" "$seen_list"; then
+        skipped=$((skipped + 1))
+        continue
+    fi
+    echo "$name" >> "$seen_list"
+    echo "$pointer" >> "$src_list"
+    queued=$((queued + 1))
+done < <(find "$STORE" -mindepth 3 -maxdepth 3 -name 'local_*.json' -not -path "$STORE/$current/*" 2>/dev/null)
 
-echo "Sessions in other accounts : $total_src"
-echo "Already present in target  : $skip_count"
-echo "New sessions to restore    : $copy_count"
+echo "Sessions in other accounts : $total"
+echo "Already present in target  : $skipped"
+echo "New sessions to restore    : $queued"
 
-if [ "$APPLY" -ne 1 ]; then
-  echo
-  echo "DRY-RUN. Re-run with --apply to copy the $copy_count new session(s) into the current account."
-  exit 0
+if [ "$apply" -ne 1 ]; then
+    echo
+    echo "Dry run. Re-run with --apply to copy the $queued new session(s) into the current account."
+    exit 0
 fi
 
-# --- backup + apply ---
-BK="$HOME/.claude/desktop-session-backup-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$BK"
-cp -R "$STORE/$CUR" "$BK/current-account-before" 2>/dev/null || true
+# --- back up, then apply ---
+backup="$HOME/.claude/desktop-session-backup-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$backup"
+cp -R "$STORE/$current" "$backup/current-account-before" 2>/dev/null || true
 echo
-echo "Backup of current account dir -> $BK"
+echo "Backup of current account dir -> $backup"
 
-n=0
-while IFS= read -r f; do
-  [ -f "$f" ] || continue
-  cp -n "$f" "$TARGET_WS/" && n=$((n+1))
-done < "$SRC_LIST"
+copied=0
+while IFS= read -r pointer; do
+    [ -f "$pointer" ] || continue
+    cp -n "$pointer" "$target_ws/" && copied=$((copied + 1))
+done < "$src_list"
 
-echo "Copied $n new session pointer(s)."
-echo "Target now holds: $(find "$TARGET_WS" -maxdepth 1 -name 'local_*.json' | wc -l | tr -d ' ') sessions."
+echo "Copied $copied new session pointer(s)."
+echo "Target now holds: $(find "$target_ws" -maxdepth 1 -name 'local_*.json' | wc -l | tr -d ' ') sessions."
 echo
-echo "NEXT: FULLY QUIT Claude (Cmd+Q, not just close window) and reopen -> Code tab."
-echo "Undo: restore \"$BK/current-account-before\" over \"$STORE/$CUR\" (remove copied local_*.json first)."
+echo "Next: fully quit Claude (Cmd-Q, not just the window) and reopen the Code tab."
+echo "Undo: restore \"$backup/current-account-before\" over \"$STORE/$current\" (remove the copied local_*.json first)."

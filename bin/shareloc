@@ -1,4 +1,13 @@
 #!/bin/sh
+# Serve ~/Public/Share over the local network, so a phone or another machine
+# on the same wifi can fetch a file without a cable, an account or a round
+# trip through someone else's cloud.
+#
+# Bound to en0's address rather than every interface: the URL has to name one
+# address anyway, and binding the one it names is the smaller exposure.
+#
+#   shareloc [port]    port defaults to 8080
+#
 # No pipefail: this is /bin/sh, where it is not POSIX.
 set -eu
 
@@ -7,28 +16,39 @@ ANSI_GREEN='\033[0;32m'
 ANSI_BLUE='\033[0;34m'
 ANSI_RESET='\033[0m'
 
+DIR="$HOME/Public/Share"
+
 prog="${0##*/}"
-dir="$HOME/Public/Share"
+
+die() {
+    echo "$prog: $1" >&2
+    exit 1
+}
+
+usage() {
+    echo "usage: $prog [port]"
+    echo "  port    what to listen on (default 8080)"
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+    -*) usage >&2; die "unknown option: $1" ;;
+esac
+
 port="${1:-8080}"
 
 # Without an address the URL is nonsense and http.server fails on --bind.
-if ! ip=$(ipconfig getifaddr en0); then
-    echo "$prog: en0 has no address - not on a network?" >&2
-    exit 1
-fi
+ip=$(ipconfig getifaddr en0) || die "en0 has no address - not on a network?"
 
-mkdir -p "$dir"
-cd "$dir"
+mkdir -p "$DIR"
+cd "$DIR"
 
 url="http://$ip:$port"
 
-echo "Sharing directory: $ANSI_BLUE$dir$ANSI_RESET."
+echo "Sharing directory: $ANSI_BLUE$DIR$ANSI_RESET."
 echo "Accessible at: $ANSI_BLUE$url$ANSI_RESET. $ANSI_GREEN(copied to clipboard)$ANSI_RESET"
 echo "Server logs will be displayed below. Press $ANSI_RED<Ctrl+C>$ANSI_RESET to stop sharing."
 
 echo "$url" | pbcopy 2>/dev/null || true
 
-python3 -m http.server --bind "$ip" "$port" || {
-    echo "$prog: failed to start server" >&2
-    exit 1
-}
+python3 -m http.server --bind "$ip" "$port" || die "failed to start server"
