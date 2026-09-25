@@ -7,12 +7,13 @@ ANSI_GREEN='\033[0;32m'
 ANSI_BLUE='\033[0;34m'
 ANSI_RESET='\033[0m'
 
+prog="${0##*/}"
 dir="$HOME/Public/Share"
 port="${1:-8080}"
 
 # Without an address the URL is nonsense and http.server fails on --bind.
 if ! ip=$(ipconfig getifaddr en0); then
-    echo "shareloc: en0 has no address - not on a network?" >&2
+    echo "$prog: en0 has no address - not on a network?" >&2
     exit 1
 fi
 
@@ -28,6 +29,6 @@ echo "Server logs will be displayed below. Press $ANSI_RED<Ctrl+C>$ANSI_RESET to
 echo "$url" | pbcopy 2>/dev/null || true
 
 python3 -m http.server --bind "$ip" "$port" || {
-    echo "shareloc: failed to start server" >&2
+    echo "$prog: failed to start server" >&2
     exit 1
 }
