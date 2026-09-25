@@ -11,7 +11,6 @@ from lived inside the library it describes.
 |---|---|
 | The library | `~/Documents/Claude` on the Mac, 82 MB, **canonical since 2026-09-25**, with its git history. An archive; see its own `CLAUDE.md` |
 | Old snapshots | 28 restic snapshots at `rclone:gdrive:Backups/backstage`, repo `01b50d2b7e`, last 2026-09-25 01:34 UTC |
-| The archived stack | `block.local:~/Archive/backstage/`, with its own README |
 | Source | `git@gitlab.com:kubgus/backstage.git`, at `ba97f9f`. No working copy - clone it if you need one |
 
 
@@ -45,7 +44,11 @@ two DNS records that this teardown had already deleted. Also the
 itself, and eight dangling `CLAUDE.local.md` symlinks across active repos.
 
 **On Block**: containers `backstage`, `backstage-smb` and `backstage-backup`, plus the
-`backstage_default` network. The stack and backup state moved to `~/Archive/backstage/`.
+`backstage_default` network. The stack and backup state moved to `~/Archive/backstage/`,
+and on 2026-09-25 that went too - `stack/` was byte-identical to GitLab bar one README
+line, the archive's own README had become false on every claim it made, and
+`backup-state/` was 1.5 MB of restic cache that no surviving credential can use. Nothing
+named backstage is left on Block.
 
 **In Cloudflare**, all verified against the API response rather than the UI:
 
@@ -101,6 +104,6 @@ were normalised with `unicodedata.normalize("NFC", name)`.
 
 ## Reclaimable on Block
 
-Nothing. The images `backstage:local` and `backstage-backup:local` and the volume
-`backstage_backstage-index` were listed here as left in place deliberately; they are
-gone as of 2026-09-25, reclaimed by something other than this teardown.
+Nothing, and nothing is left to reclaim. The images `backstage:local` and
+`backstage-backup:local` and the volume `backstage_backstage-index` were listed here as
+left in place deliberately; they were already gone when checked on 2026-09-25.
