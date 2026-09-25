@@ -14,7 +14,7 @@ description: How Kubo wants generated files built, named and handed over. Use wh
   (openpyxl, python-docx) against hand-built OOXML plus `zip`. He may not want Python in
   play, and that is a decision rather than an implementation detail.
 - **Write for the document's audience, not your defaults.** A Slovak-audience document
-  takes `DD.MM.YYYY` and Slovak conventions throughout.
+  takes `DD. MM. YYYY` and Slovak conventions throughout.
 - **Clean and professional** - neither overdesigned nor bare. No decoration that carries
   no information.
 
