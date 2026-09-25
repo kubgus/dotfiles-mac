@@ -9,16 +9,22 @@ from lived inside the library it describes.
 
 | | |
 |---|---|
-| The library | `block.local:~/Claude`, 103 MB, still canonical. Reach it over SSH: `ssh -4 block.local` |
+| The library | `~/Documents/Claude` on the Mac, 82 MB, **canonical since 2026-09-25**, with its git history. An archive; see its own `CLAUDE.md` |
 | Old snapshots | 28 restic snapshots at `rclone:gdrive:Backups/backstage`, repo `01b50d2b7e`, last 2026-09-25 01:34 UTC |
 | The archived stack | `block.local:~/Archive/backstage/`, with its own README |
 | Source | `git@gitlab.com:kubgus/backstage.git`, working copy `~/Documents/Code/backstage` |
-| Mac replica | `~/Documents/Claude`, 43 MB, now stale and no longer synced |
+| Block leftover | `block.local:~/Claude`, 103 MB. No longer canonical and no longer synced - a stale copy kept only until you are sure the Mac one is good |
 
-**Nothing backs up `~/Claude` any more.** The backup container is gone with the rest.
-The 28 snapshots are a point-in-time copy, not a running backup. The repository
-password is in the password manager and in `~/Archive/backstage/backup-state/repo.password`;
-lose it and the snapshots are unrecoverable by any means.
+**Nothing backs up the library any more.** The backup container is gone with the rest,
+and the canonical copy has moved to a machine the restic repository never covered. The
+28 snapshots are a point-in-time copy of the Block tree, not a running backup. The
+repository password is in the password manager and in
+`~/Archive/backstage/backup-state/repo.password`; lose it and they are unrecoverable by
+any means.
+
+The Mac copy has **no remote and no backup**, and the 49 `.pii.` files in it are
+git-ignored, so git would not protect them even if it had one. That is the one real
+gap left by this retirement.
 
 ## What was removed
 
