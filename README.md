@@ -30,7 +30,8 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `_setup/` | One script per domain, plus `lib.sh`. |
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
-| `claude/` | Claude Code: the global context file, settings, status line, and the `kubgus` plugin. |
+| `claude/` | Claude Code: the global context file, settings, and the status line. |
+| `claude/kubgus/` | The `kubgus` plugin - output style, skills, hooks, MCP servers. |
 | `claude/backstage-teardown.md` | What is left of the retired backstage library, and the order to take it down in. |
 | `pi/` | Pi agent config. |
 | `zprofile` | Linked to `~/.zprofile`. |
@@ -129,22 +130,24 @@ plugin takes the sounds with it. Plugin hooks and settings hooks both fire for
 the same event, which is why the settings copies had to go: two definitions
 meant every sound played twice.
 
-**The plugin cache is a symlink, on purpose.** `claude plugin install` copies
-the plugin into `~/.claude/plugins/cache/kubgus/kubgus/<version>/` and then
-reads only that copy, so an edit in `claude/plugins/` stays invisible until the
-version in `plugin.json` changes - `install` and `update` both no-op on an
-unchanged version, silently. `_setup/claude.sh` replaces that directory with a
-link to the source, which makes edits live and survives install, update and
-list. Bumping the version creates a new cache path, so re-run `./_setup.sh
-claude` after you do.
+**The plugin is discovered, not installed.** `_setup/claude.sh` links
+`claude/kubgus` to `~/.claude/skills/kubgus`, and anything under
+`~/.claude/skills/<name>` loads as `<name>@skills-dir`, read in place. That is
+what `claude plugin init` scaffolds, and it is what a plugin you edit rather
+than consume wants: an edit here is live in the next session with no install,
+no version bump and no cache.
 
-**The plugin is declared, not linked.** `claude/settings.json` carries
-`extraKnownMarketplaces` and `enabledPlugins`, so a fresh machine picks the
-plugin up from the settings link with no CLI step. The marketplace path has to
-be absolute, because a relative one resolves against the session's working
-directory rather than the settings file. A `claude plugin` command that *writes*
-settings replaces the symlink with a real file - re-run `./_setup.sh claude` to
-repair it. That is what the clean filter makes harmless.
+Installing it from a marketplace instead - which is the obvious-looking route -
+copies the plugin into `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`
+and then reads only that copy. `install` and `update` both no-op on an unchanged
+version, so edits stay invisible with no warning that they are being ignored.
+Worse, a `claude plugin` command that writes settings replaces the
+`~/.claude/settings.json` symlink with a real file, which is how that file
+drifted out of this repo before. Neither problem exists on this route, because
+nothing installs and nothing writes.
+
+`bin/clc` already symlinks `~/.claude/skills` into every account directory, so
+the plugin reaches all of them without `clc` being taught about it.
 
 **Nothing is ever pruned.** Setup creates and repairs symlinks but never
 removes them. Delete something from `bin/` and its link in `~/Bin` is left
@@ -158,14 +161,14 @@ dangling; clean it up by hand.
   executable. `_setup.sh` finds it by globbing; nothing else needs editing.
 - **A new config directory** - whitelist it in `.gitignore` under `config/`.
 - **A new skill, or an edit to the plugin** - work directly in
-  `claude/plugins/kubgus/`. The cache symlink means it is live; no reinstall.
+  `claude/kubgus/`. It is read in place, so there is nothing to reinstall.
 
 Shell scripts here should be `shellcheck`-clean, and start with
 `set -euo pipefail` unless there is a reason not to. Check them with:
 
 ```bash
 shellcheck -x -e SC1071 _setup.sh _setup/*.sh claude/*.sh \
-    claude/plugins/kubgus/hooks-handlers/*.sh bin/*
+    claude/kubgus/hooks-handlers/*.sh bin/*
 ```
 
 `bin/clc` is Python rather than shell - it needs JSON, HTTPS, Unicode

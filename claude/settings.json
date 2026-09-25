@@ -1,17 +1,6 @@
 {
   "agentPushNotifEnabled": true,
   "editorMode": "vim",
-  "enabledPlugins": {
-    "kubgus@kubgus": true
-  },
-  "extraKnownMarketplaces": {
-    "kubgus": {
-      "source": {
-        "path": "/Users/kubgus/Dotfiles/claude/plugins",
-        "source": "directory"
-      }
-    }
-  },
   "inputNeededNotifEnabled": true,
   "permissions": {
     "defaultMode": "auto"
