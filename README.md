@@ -31,6 +31,7 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
 | `claude/` | Claude Code: the global context file, settings, status line, and the `kubgus` plugin. |
+| `claude/backstage-teardown.md` | What is left of the retired backstage library, and the order to take it down in. |
 | `pi/` | Pi agent config. |
 | `zprofile` | Linked to `~/.zprofile`. |
 
