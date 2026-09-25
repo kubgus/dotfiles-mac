@@ -58,6 +58,25 @@ itself, and eight dangling `CLAUDE.local.md` symlinks across active repos.
 **Elsewhere**: the claude.ai connector, and the Teable `Central -> Services` row, which
 is marked Down rather than deleted because that table keeps retired services that way.
 
+## Reading the 28 snapshots again
+
+Both credentials this needs were deleted on 2026-09-25, so it takes a rebuild rather
+than a command. The password comes out of the password manager; the Drive remote has to
+be re-authorised from nothing, because the rclone config went with the archive.
+
+```sh
+rclone config          # a new remote named gdrive, pointed at the same Drive account
+docker run --rm -it \
+  -v "$HOME/.config/rclone:/state" \
+  -e RCLONE_CONFIG=/state/rclone.conf \
+  restic/restic:latest -r rclone:gdrive:Backups/backstage snapshots
+```
+
+restic then asks for the password on the terminal. Repository `01b50d2b7e`, last
+snapshot 2026-09-25 01:34 UTC, verified byte for byte against the library at the time.
+This recipe is the one thing the archive's own README held that is not in git, which is
+why it is here now.
+
 ## Three things worth keeping
 
 **The dashboard reports success for work it did not do.** Deleting the service token
