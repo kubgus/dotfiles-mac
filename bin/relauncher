@@ -7,8 +7,8 @@
 # has since moved, and because Launchpad-style folders of symlinks do not open
 # the way a folder of aliases does.
 #
-# Additive only: an app that has been uninstalled leaves its alias behind, and
-# removing it is a manual job.
+# It runs both ways: an app installed since the last run gets an alias filed,
+# and an alias whose app has been uninstalled goes to the Trash.
 set -euo pipefail
 
 # Folder where you organize your apps (edit this path if you want a different location)
@@ -23,65 +23,115 @@ SEARCH_PATHS=(
 )
 
 prog="${0##*/}"
+dry_run=0
 
 usage() {
-    echo "usage: $prog"
-    echo "  Files an alias in $ORG_FOLDER for every app not already there."
+    echo "usage: $prog [-n|--dry-run]"
+    echo "  Files an alias in $ORG_FOLDER for every app installed on this machine,"
+    echo "  and moves to the Trash every alias whose app is gone."
+    echo
+    echo "  -n, --dry-run   Report what would change without changing anything."
+    echo "  -h, --help      Show this message."
 }
 
-case "${1:-}" in
-    -h|--help) usage; exit 0 ;;
-    "") ;;
-    *) usage >&2; echo "$prog: unexpected argument: $1" >&2; exit 1 ;;
-esac
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -n|--dry-run) dry_run=1 ;;
+        *) usage >&2; echo "$prog: unexpected argument: $1" >&2; exit 1 ;;
+    esac
+    shift
+done
 
-mkdir -p "$ORG_FOLDER"
+if [ "$dry_run" -eq 1 ]; then
+    add_verb="Would add"; prune_verb="Would prune"
+else
+    add_verb="Added"; prune_verb="Pruned"
+fi
 
 # What is already filed, keyed on the app each alias points at rather than its name:
 # Finder names an alias after the app's display name, which often differs from the
 # bundle ("FindMy.app" lands as "Find My.app", "Pages Creator Studio.app" as
 # "Pages.app"), and you are free to rename an alias once it is filed.
-existing_targets=$(osascript - "$ORG_FOLDER" <<'APPLESCRIPT'
+#
+# Resolved through the alias file's bookmark rather than Finder's "original item",
+# which cannot tell a dead alias from a live one: it throws the same error for an
+# alias whose app is gone as for one pointing at a symlink, and several shipped
+# apps are symlinks (/Applications/Safari.app into a cryptex, Feedback Assistant
+# into CoreServices). NSURL resolves both, and hands back the path as the search
+# paths spell it rather than whatever the symlink points at.
+classified=""
+if [ -d "$ORG_FOLDER" ]; then
+    alias_files=()
+    while IFS= read -r -d '' f; do
+        alias_files+=("$f")
+    done < <(find "$ORG_FOLDER" -type f -print0)
+
+    if [ ${#alias_files[@]} -gt 0 ]; then
+        # No apostrophes below: bash 3.2 mis-parses one inside a heredoc inside $( )
+        classified=$(osascript -l JavaScript - "${alias_files[@]}" <<'JXA'
+ObjC.import("Foundation")
+// T<path> for the target of a live alias, D<path> for an alias whose target is
+// gone. Anything that is not an alias file at all prints nothing, so a stray
+// .DS_Store is never mistaken for one. Anything that errors is left alone.
+function run(argv) {
+  var out = []
+  for (var i = 0; i < argv.length; i++) {
+    var p = argv[i]
+    try {
+      var data = $.NSURL.bookmarkDataWithContentsOfURLError($.NSURL.fileURLWithPath(p), Ref())
+      if (!data || data.length === undefined || data.length === 0) { continue }
+      // withoutUI | withoutMounting: never prompt, never wake a network volume
+      var opts = (1 << 8) | (1 << 9)
+      var r = $.NSURL.URLByResolvingBookmarkDataOptionsRelativeToURLBookmarkDataIsStaleError(
+        data, opts, $(), Ref(), Ref())
+      if (!r || r.path === undefined || r.path.js === undefined) { out.push("D" + p) }
+      else { out.push("T" + r.path.js) }
+    } catch (e) { continue }
+  }
+  return out.join("\n")
+}
+JXA
+)
+    fi
+elif [ "$dry_run" -eq 0 ]; then
+    mkdir -p "$ORG_FOLDER"
+fi
+
+existing_targets=$(printf '%s\n' "$classified" | sed -n 's/^T//p')
+
+# Uninstalled apps leave their alias behind. Finder rather than rm, so a wrong
+# call lands in the Trash with Put Back intact rather than losing the filing.
+while IFS= read -r alias_path; do
+    [ -n "$alias_path" ] || continue
+    echo "$prune_verb: ${alias_path#"$ORG_FOLDER"/}"
+    if [ "$dry_run" -eq 0 ]; then
+        osascript - "$alias_path" > /dev/null <<'APPLESCRIPT'
 on run argv
-  -- No apostrophes below: bash 3.2 mis-parses one inside a heredoc inside $( )
-  set out to ""
-  tell application "Finder"
-    repeat with A in (get every alias file of entire contents of folder (POSIX file (item 1 of argv) as alias))
-      try
-        set out to out & (POSIX path of ((original item of (contents of A)) as alias)) & linefeed
-      end try
-    end repeat
-  end tell
-  return out
+  tell application "Finder" to delete (POSIX file (item 1 of argv) as alias)
 end run
 APPLESCRIPT
-)
-existing_targets=$(printf '%s' "$existing_targets" | sed 's:/*$::')
-
-# Fallback for the handful of aliases whose target Finder will not hand back - Safari,
-# for one, resolves into a cryptex. Without this they would be re-added on every run.
-existing_names=$(find "$ORG_FOLDER" -iname "*.app" -exec basename {} \;)
+    fi
+done < <(printf '%s\n' "$classified" | sed -n 's/^D//p')
 
 for dir in "${SEARCH_PATHS[@]}"; do
     [ -d "$dir" ] || continue
-    while IFS= read -r app_path; do
-        app_name=$(basename "$app_path")
-
-        if grep -Fxq "$app_path" <<< "$existing_targets" \
-            || grep -Fxq "$app_name" <<< "$existing_names"; then
+    while IFS= read -r -d '' app_path; do
+        if grep -Fxq "$app_path" <<< "$existing_targets"; then
             continue
         fi
 
-        osascript - "$app_path" "$ORG_FOLDER" > /dev/null <<'APPLESCRIPT'
+        if [ "$dry_run" -eq 0 ]; then
+            osascript - "$app_path" "$ORG_FOLDER" > /dev/null <<'APPLESCRIPT'
 on run argv
   tell application "Finder" to make alias file to POSIX file (item 1 of argv) at POSIX file (item 2 of argv)
 end run
 APPLESCRIPT
+        fi
 
         # Keep the run self-consistent: the same app can sit in two search paths
         existing_targets+=$'\n'"$app_path"
-        existing_names+=$'\n'"$app_name"
 
-        echo "Added: $app_name"
-    done < <(find "$dir" -maxdepth 2 -iname "*.app")
+        echo "$add_verb: $(basename "$app_path")"
+    done < <(find "$dir" -maxdepth 2 -iname "*.app" -print0)
 done
