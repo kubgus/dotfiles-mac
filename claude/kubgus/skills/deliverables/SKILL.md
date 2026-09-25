@@ -22,8 +22,10 @@ description: How Kubo wants generated files built, named and handed over. Use wh
 (`VV`, `PK`, `AI`), short words are capitalised too, extensions stay lowercase. A
 deliberate ` - ` between segments is fine; `-` or `_` as a word separator is not.
 
-Never rename an imported file. Adding a segment before the extension is not a rename, so
-`export.xlsx` to `export.pii.xlsx` is fair game when something has to act on that fact.
+Never rename an imported file. Adding a segment before the extension is not a rename -
+the original name stays legible and the format is untouched - so `export.xlsx` to
+`export.draft.xlsx` is fair game when something has to act on that fact. What a marker
+means is the project's to define.
 
 Exempt: source code, tool names (`CLAUDE.md`, `SKILL.md`, `.gitignore`), fixed-name
 scripts. A project's own convention always wins over this one.
