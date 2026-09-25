@@ -1,0 +1,10 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "kubgus",
+  "version": "1.0.0",
+  "description": "House style, writing voice, deliverable conventions, shell script rules, notification sounds and personal MCP servers.",
+  "author": {
+    "name": "Jakub Gustafik",
+    "email": "mail@gustafik.com"
+  }
+}

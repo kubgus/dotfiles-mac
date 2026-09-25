@@ -1,36 +1,16 @@
 {
   "agentPushNotifEnabled": true,
   "editorMode": "vim",
-  "hooks": {
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Submarine.aiff >/dev/null 2>&1 &",
-            "type": "command"
-          },
-          {
-            "command": "bash \"$HOME/.claude/bell.sh\"",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
+  "enabledPlugins": {
+    "kubgus@kubgus": true
+  },
+  "extraKnownMarketplaces": {
+    "kubgus": {
+      "source": {
+        "path": "/Users/kubgus/Dotfiles/claude/plugins",
+        "source": "directory"
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "[ -f $HOME/.claude/mute ] || afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 &",
-            "type": "command"
-          },
-          {
-            "command": "bash \"$HOME/.claude/bell.sh\"",
-            "type": "command"
-          }
-        ]
-      }
-    ]
+    }
   },
   "inputNeededNotifEnabled": true,
   "permissions": {

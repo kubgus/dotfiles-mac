@@ -3,8 +3,6 @@ config/*
 !config/nvim
 !config/opencode
 
-# the future is now, old man
-/CLAUDE.local.md
 /tmp
 
 # 😭

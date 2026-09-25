@@ -30,7 +30,7 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `_setup/` | One script per domain, plus `lib.sh`. |
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
-| `claude/` | Claude Code settings. |
+| `claude/` | Claude Code: the global context file, settings, status line, and the `kubgus` plugin. |
 | `pi/` | Pi agent config. |
 | `zprofile` | Linked to `~/.zprofile`. |
 
@@ -40,7 +40,7 @@ Each is a script in `_setup/`, runnable on its own:
 
 - **`config`** - `~/.config`
 - **`shell`** - `~/.zprofile`, and everything in `bin/`
-- **`claude`** - Claude Code settings
+- **`claude`** - Claude Code context file, settings, and the `kubgus` plugin
 - **`pi`** - Pi agent config
 
 `_setup/lib.sh` holds `link_file`, the one helper every domain needs. A helper
@@ -123,6 +123,27 @@ chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
 ends. They sit in different frequency registers so they stay apart over music.
 `touch ~/.claude/mute` silences both; delete the file to bring them back. It is
 deliberately untracked - per-machine, per-mood state rather than configuration.
+They are plugin hooks now rather than `settings.json` hooks, so disabling the
+plugin takes the sounds with it. Plugin hooks and settings hooks both fire for
+the same event, which is why the settings copies had to go: two definitions
+meant every sound played twice.
+
+**The plugin cache is a symlink, on purpose.** `claude plugin install` copies
+the plugin into `~/.claude/plugins/cache/kubgus/kubgus/<version>/` and then
+reads only that copy, so an edit in `claude/plugins/` stays invisible until the
+version in `plugin.json` changes - `install` and `update` both no-op on an
+unchanged version, silently. `_setup/claude.sh` replaces that directory with a
+link to the source, which makes edits live and survives install, update and
+list. Bumping the version creates a new cache path, so re-run `./_setup.sh
+claude` after you do.
+
+**The plugin is declared, not linked.** `claude/settings.json` carries
+`extraKnownMarketplaces` and `enabledPlugins`, so a fresh machine picks the
+plugin up from the settings link with no CLI step. The marketplace path has to
+be absolute, because a relative one resolves against the session's working
+directory rather than the settings file. A `claude plugin` command that *writes*
+settings replaces the symlink with a real file - re-run `./_setup.sh claude` to
+repair it. That is what the clean filter makes harmless.
 
 **Nothing is ever pruned.** Setup creates and repairs symlinks but never
 removes them. Delete something from `bin/` and its link in `~/Bin` is left
@@ -135,12 +156,15 @@ dangling; clean it up by hand.
 - **A new domain** - add `_setup/<name>.sh`, source `lib.sh`, make it
   executable. `_setup.sh` finds it by globbing; nothing else needs editing.
 - **A new config directory** - whitelist it in `.gitignore` under `config/`.
+- **A new skill, or an edit to the plugin** - work directly in
+  `claude/plugins/kubgus/`. The cache symlink means it is live; no reinstall.
 
 Shell scripts here should be `shellcheck`-clean, and start with
 `set -euo pipefail` unless there is a reason not to. Check them with:
 
 ```bash
-shellcheck -x -e SC1071 _setup.sh _setup/*.sh claude/*.sh bin/*
+shellcheck -x -e SC1071 _setup.sh _setup/*.sh claude/*.sh \
+    claude/plugins/kubgus/hooks-handlers/*.sh bin/*
 ```
 
 `bin/clc` is Python rather than shell - it needs JSON, HTTPS, Unicode

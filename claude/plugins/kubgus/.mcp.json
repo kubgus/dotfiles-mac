@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "teable": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "cd /tmp && exec node /Users/kubgus/Sources/teable-mcp-server/dist/index.js"],
+      "env": {
+        "TEABLE_API_KEY": "${TEABLE_API_KEY}",
+        "TEABLE_BASE_URL": "https://tea.reynach.com/api"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "cd /tmp && exec node /Users/kubgus/Sources/playwright-mcp/cli.js --browser chromium --isolated"]
+    }
+  }
+}
