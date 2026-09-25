@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# steaminstall <appid> [name]
+# steamget <appid> [name]
 #
 # Installs a Steam game's macOS build using the native (Homebrew) steamcmd,
 # so no Steam client is needed to install or later launch the game.
 #
 # Usage:
-#   steaminstall 646570                 # installs to ~/Games/646570
-#   steaminstall 646570 SlayTheSpire    # installs to ~/Games/SlayTheSpire
+#   steamget 646570                 # installs to ~/Games/646570
+#   steamget 646570 SlayTheSpire    # installs to ~/Games/SlayTheSpire
 #
 # The Steam account is read from $STEAM_USERNAME and asked for when unset, so
 # the name stays out of the repo. First run will also prompt for your password
