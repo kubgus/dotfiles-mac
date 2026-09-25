@@ -8,8 +8,8 @@
 #   steamget 646570    installs to ~/Games/646570
 #
 # A copy installed under some other directory name - by hand, or by the version
-# of this script that took one - is found by its manifest and moved into place
-# rather than downloaded again.
+# of this script that took one - is found by its manifest and refused, rather
+# than downloaded a second time beside it.
 #
 # The Steam account comes from $STEAM_USERNAME and is asked for when unset, so
 # the name stays out of the repo. A first run also prompts for the password
@@ -42,61 +42,21 @@ command -v steamcmd >/dev/null 2>&1 \
 appid="$1"
 install_dir="$GAMES_DIR/$appid"
 
-# steamcmd writes a manifest inside whatever it was given as force_install_dir,
-# so an install can be identified by AppID whatever its directory ended up
-# called. Without this, a copy sitting under a name would go unseen and the
-# whole game would be fetched a second time beside it.
-adopt_existing_install() {
-    local manifest dir here=0 strays=0 stray=""
-
-    # Decide after the whole walk, never inside it: two copies of one AppID
-    # would otherwise be resolved differently depending on which directory name
-    # the glob happened to reach first.
-    for manifest in "$GAMES_DIR"/*/steamapps/"appmanifest_$appid.acf"; do
-        # An unmatched glob comes through as the pattern itself; bash 3.2 has no
-        # nullglob worth relying on here.
-        [ -f "$manifest" ] || continue
-        dir="${manifest%/steamapps/*}"
-        if [ "$dir" = "$install_dir" ]; then
-            here=1
-        else
-            strays=$((strays + 1))
-            stray="$dir"
-        fi
-    done
-
-    # Already where it belongs. A copy under another name is then only wasted
-    # disk, and not something to move on top of a live install.
-    if [ "$here" -eq 1 ]; then
-        if [ "$strays" -eq 1 ]; then
-            echo "$prog: this AppID is also installed at $stray - stale, safe to delete" >&2
-        elif [ "$strays" -gt 1 ]; then
-            echo "$prog: this AppID is also installed in $strays other directories under $GAMES_DIR" >&2
-        fi
-        return 0
+# steamcmd writes appmanifest_<appid>.acf inside whatever it was given as
+# force_install_dir, so an install can be found by AppID whatever its directory
+# ended up called. Without this, a copy sitting under a name would go unseen
+# and the whole game would be fetched again beside it.
+for manifest in "$GAMES_DIR"/*/steamapps/"appmanifest_$appid.acf"; do
+    # An unmatched glob comes through as the pattern itself; bash 3.2 has no
+    # nullglob worth relying on here.
+    [ -f "$manifest" ] || continue
+    dir="${manifest%/steamapps/*}"
+    # The right directory is not a duplicate - fall through and let steamcmd
+    # update it, which is what it is for.
+    if [ "$dir" != "$install_dir" ]; then
+        die "AppID $appid is already installed at $dir"
     fi
-
-    if [ "$strays" -eq 0 ]; then
-        return 0
-    fi
-    if [ "$strays" -gt 1 ]; then
-        die "AppID $appid is installed in $strays directories under $GAMES_DIR - keep one and remove the rest"
-    fi
-
-    # An empty target is a run that stopped before downloading anything.
-    if [ -d "$install_dir" ]; then
-        rmdir "$install_dir" 2>/dev/null || true
-    fi
-    if [ -e "$install_dir" ]; then
-        die "$install_dir is in the way of moving $stray into place"
-    fi
-
-    echo "Found this AppID at $stray - moving it to $install_dir"
-    mv "$stray" "$install_dir"
-    return 0
-}
-
-adopt_existing_install
+done
 
 steam_username="${STEAM_USERNAME:-}"
 if [ -z "$steam_username" ]; then
