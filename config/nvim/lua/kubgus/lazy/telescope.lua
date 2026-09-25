@@ -7,8 +7,10 @@ return {
     },
     opts = {
         defaults = {
-            -- ripgrep skips hidden and gitignored files unless told otherwise;
-            -- the last glob keeps .git's own contents out of the results.
+            -- ripgrep skips hidden and gitignored files unless told otherwise.
+            -- --no-ignore-vcs drops .gitignore only, so a noisy project can
+            -- still hide its build output with a .ignore file. The glob keeps
+            -- .git's own contents out, which rg otherwise walks here.
             vimgrep_arguments = {
                 "rg",
                 "--color=never",
@@ -18,7 +20,7 @@ return {
                 "--column",
                 "--smart-case",
                 "--hidden",
-                "--no-ignore",
+                "--no-ignore-vcs",
                 "--glob=!**/.git/*",
             },
             file_ignore_patterns = { "%.git/" },
@@ -26,7 +28,13 @@ return {
         pickers = {
             find_files = {
                 hidden = true,
-                no_ignore = true,
+                -- telescope has no flag for --no-ignore-vcs, so the command is
+                -- spelled out. It has to be a function: telescope appends
+                -- --hidden to the table it is handed, and would append again on
+                -- every subsequent call to a shared one.
+                find_command = function()
+                    return { "rg", "--files", "--color", "never", "--no-ignore-vcs", "--glob=!**/.git/*" }
+                end,
             },
         },
     },
