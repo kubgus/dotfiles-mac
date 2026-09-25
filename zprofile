@@ -127,30 +127,3 @@ _export_secret() {
 
 # call, variable, service:
 _export_secret TEABLE_API_KEY teable-mcp-api-key
-
-# -----------------------
-# Survive a network mount reconnecting
-# -----------------------
-# A shell's cwd is a handle on a filesystem, not a path. When an SMB share drops and
-# remounts, the handle is dead for good: the path is visibly back, but the prompt sits in
-# a directory that reports itself missing. Re-entering the same path by name reattaches to
-# the new filesystem.
-#
-# Testing `[[ -d . ]]` does not work - it reports a dead cwd as alive. Comparing the
-# device and inode of `.` against those of $PWD does: they diverge the moment the handle
-# goes stale, and a path that is genuinely gone returns 1 so the shell is left where it is
-# rather than being dragged somewhere it never asked to be.
-autoload -Uz add-zsh-hook
-
-_cwd_is_stale() {
-  local here there
-  here=$(stat -f "%d:%i" . 2>/dev/null) || return 0
-  there=$(stat -f "%d:%i" "$PWD" 2>/dev/null) || return 1
-  [[ "$here" != "$there" ]]
-}
-
-_reattach_cwd() {
-  _cwd_is_stale && cd -- "$PWD" 2>/dev/null
-}
-
-add-zsh-hook precmd _reattach_cwd
