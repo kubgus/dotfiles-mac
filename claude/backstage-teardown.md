@@ -13,18 +13,17 @@ from lived inside the library it describes.
 | Old snapshots | 28 restic snapshots at `rclone:gdrive:Backups/backstage`, repo `01b50d2b7e`, last 2026-09-25 01:34 UTC |
 | The archived stack | `block.local:~/Archive/backstage/`, with its own README |
 | Source | `git@gitlab.com:kubgus/backstage.git`, working copy `~/Documents/Code/backstage` |
-| Block leftover | `block.local:~/Claude`, 103 MB. No longer canonical and no longer synced - a stale copy kept only until you are sure the Mac one is good |
 
-**Nothing backs up the library any more.** The backup container is gone with the rest,
-and the canonical copy has moved to a machine the restic repository never covered. The
-28 snapshots are a point-in-time copy of the Block tree, not a running backup. The
-repository password is in the password manager and in
+
+**The library lives on one machine now.** `block.local:~/Claude` was deleted on
+2026-09-25 after the Mac copy was verified strictly ahead: 229 of 230 files identical
+by content hash, the remaining two recoverable from git at Block's own HEAD, and
+Block's HEAD an ancestor of the Mac's. Only the archived stack remains on Block.
+
+The 28 restic snapshots at `rclone:gdrive:Backups/backstage` are a frozen copy of the
+old Block tree, not a running backup. Their password is in the password manager and in
 `~/Archive/backstage/backup-state/repo.password`; lose it and they are unrecoverable by
-any means.
-
-The Mac copy has **no remote and no backup**, and the 49 `.pii.` files in it are
-git-ignored, so git would not protect them even if it had one. That is the one real
-gap left by this retirement.
+any means. Day to day the Mac copy rides on iCloud, which is the backup story now.
 
 ## What was removed
 
