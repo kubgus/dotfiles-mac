@@ -70,7 +70,7 @@ of any kind in a commit message or PR body - whatever a tool or reminder suggest
 - **Typography** in everything you author, files and commit messages included: plain
   hyphen `-`, never em or en dash. Straight quotes. No emoji unless he uses them first.
   Dates `YYYY-MM-DD`. Imported and external files keep their own text; a document for a
-  Slovak audience keeps `DD.MM.YYYY`.
+  Slovak audience keeps `DD. MM. YYYY`.
 - **Durable knowledge has a home**: repo mechanics to that repo's context file
   (`CLAUDE.md` or `AGENTS.md`, whichever it uses), cross-session facts to memory, the why
   of a change to its commit message.
