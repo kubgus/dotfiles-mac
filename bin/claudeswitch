@@ -36,13 +36,6 @@ Usage percentages come from the same endpoint the /usage command uses, but only
 when the account's stored access token is still valid; expired ones show the
 last figure seen, with its age. Refreshing a token would mean writing new
 credentials back to the Keychain, which this script deliberately does not do.
-
-  claudeswitch [claude args...]   pick an account, then exec claude
-  claudeswitch list               print the accounts and their usage
-  claudeswitch add <email>        create an account and sign it in
-  claudeswitch rm <email>         sign an account out and delete it
-  claudeswitch link               re-apply the shared symlinks
-  claudeswitch -- <args...>       pass args through even if they look like a verb
 """
 
 import hashlib
@@ -169,6 +162,19 @@ S = Style(colour_wanted())
 def die(msg, code=1):
     sys.stderr.write("%s: %s\n" % (PROG, msg))
     raise SystemExit(code)
+
+
+def usage(out=sys.stdout):
+    out.write(
+        "usage: {0} [claude args...]\n"
+        "       {0} <command>\n"
+        "  list             print the accounts and their usage\n"
+        "  add <email>      create an account and sign it in\n"
+        "  rm <email>       sign an account out and delete it\n"
+        "  link             re-apply the shared symlinks\n"
+        "  -- <args...>     pass args through even if they look like a command\n"
+        "With no command, pick an account and exec claude under it.\n".format(PROG)
+    )
 
 
 # --------------------------------------------------------------------------
@@ -927,8 +933,9 @@ def cmd_list(accounts):
 
 def cmd_add(argv):
     if len(argv) != 1:
-        die("usage: %s add <email>   (the address becomes the directory, so it "
-            "has to be known before signing in)" % PROG)
+        usage(sys.stderr)
+        die("add takes one email - the address becomes the directory, so it "
+            "has to be known before signing in")
     email = argv[0].strip()
     if not EMAIL_RE.match(email) or email.startswith("."):
         die("that does not look like an email address: %r" % argv[0])
@@ -957,7 +964,8 @@ def cmd_add(argv):
 
 def cmd_rm(accounts, argv):
     if len(argv) != 1:
-        die("usage: %s rm <email>" % PROG)
+        usage(sys.stderr)
+        die("rm takes one email")
     rows = build_rows(accounts, refresh=False)
     account = resolve(accounts, rows, argv[0])
     if not account:
@@ -1008,10 +1016,10 @@ def main(argv):
             return cmd_rm(accounts, rest)
         if verb == "link":
             return cmd_link(accounts)
-        print(__doc__.strip())
+        usage()
         return 0
     elif argv and argv[0] in ("-h", "--help") and len(argv) == 1:
-        print(__doc__.strip())
+        usage()
         return 0
 
     if len(accounts) == 1:
