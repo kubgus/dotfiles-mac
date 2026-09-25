@@ -16,14 +16,18 @@ if ! ip=$(ipconfig getifaddr en0); then
     exit 1
 fi
 
+mkdir -p "$dir"
+cd "$dir"
+
 url="http://$ip:$port"
 
 echo "Sharing directory: $ANSI_BLUE$dir$ANSI_RESET."
 echo "Accessible at: $ANSI_BLUE$url$ANSI_RESET. $ANSI_GREEN(copied to clipboard)$ANSI_RESET"
 echo "Server logs will be displayed below. Press $ANSI_RED<Ctrl+C>$ANSI_RESET to stop sharing."
 
-cd "$dir" || exit 1
+echo "$url" | pbcopy 2>/dev/null || true
 
-echo "$url" | pbcopy
-
-python3 -m http.server --bind "$ip" "$port"
+python3 -m http.server --bind "$ip" "$port" || {
+    echo "shareloc: failed to start server" >&2
+    exit 1
+}
