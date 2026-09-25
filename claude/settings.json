@@ -1,11 +1,15 @@
 {
-  "agentPushNotifEnabled": true,
+  "agentPushNotifEnabled": false,
+  "crossSessionInbound": "accept",
+  "dialogExpiry": "never",
   "editorMode": "vim",
-  "inputNeededNotifEnabled": true,
+  "inputNeededNotifEnabled": false,
+  "outputStyle": "kubgus:kubgus",
   "permissions": {
     "defaultMode": "auto"
   },
   "preferredNotifChannel": "notifications_disabled",
+  "remoteControlAtStartup": false,
   "skipWorkflowUsageWarning": true,
   "statusLine": {
     "command": "bash \"$HOME/.claude/statusline.sh\"",
