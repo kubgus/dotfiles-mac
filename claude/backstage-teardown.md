@@ -12,7 +12,7 @@ from lived inside the library it describes.
 | The library | `~/Documents/Claude` on the Mac, 82 MB, **canonical since 2026-09-25**, with its git history. An archive; see its own `CLAUDE.md` |
 | Old snapshots | 28 restic snapshots at `rclone:gdrive:Backups/backstage`, repo `01b50d2b7e`, last 2026-09-25 01:34 UTC |
 | The archived stack | `block.local:~/Archive/backstage/`, with its own README |
-| Source | `git@gitlab.com:kubgus/backstage.git`, working copy `~/Documents/Code/backstage` |
+| Source | `git@gitlab.com:kubgus/backstage.git`, at `ba97f9f`. No working copy - clone it if you need one |
 
 
 **The library lives on one machine now.** `block.local:~/Claude` was deleted on
@@ -27,7 +27,11 @@ any means. Day to day the Mac copy rides on iCloud, which is the backup story no
 
 ## What was removed
 
-**On the Mac**: the `com.reynach.backstagemount` launchd agent and its plist,
+**On the Mac**: the working copy at `~/Documents/Code/backstage`, pushed to GitLab
+first and verified against `refs/heads/main` on the remote before it went, taking its
+gitignored `.env` with it - the tokens in it name a service token, a keychain entry and
+two DNS records that this teardown had already deleted. Also the
+`com.reynach.backstagemount` launchd agent and its plist,
 `~/Bin/backstagemount`, `~/Bin/claudelink`, `~/.config/backstage/smb-token.env`,
 18 MB of non-rotating logs, two hangs caches, the SMB keychain entry, the mount
 itself, and eight dangling `CLAUDE.local.md` symlinks across active repos.
