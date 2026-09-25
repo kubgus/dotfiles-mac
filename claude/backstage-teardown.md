@@ -21,12 +21,17 @@ by content hash, the remaining two recoverable from git at Block's own HEAD, and
 Block's HEAD an ancestor of the Mac's. Only the archived stack remains on Block.
 
 The 28 restic snapshots at `rclone:gdrive:Backups/backstage` are a frozen copy of the
-old Block tree, not a running backup. Their password is in the password manager and
-nowhere else since 2026-09-25, when the on-disk copy at
-`~/Archive/backstage/backup-state/repo.password` was deleted; lose that entry and they
-are unrecoverable by any means. `stack/backup/backup.sh`, `stack/compose.yaml` and the
-archive's own README still name the file, so a restore has to supply it by hand. Day to
+old Block tree, not a running backup, and as of 2026-09-25 nothing on any machine can
+reach them. Both credentials were deleted that day: `backup-state/repo.password` and
+`backup-state/rclone.conf`, along with `stack/.env`. Restoring from them now means a
+fresh rclone remote for the Drive account *and* the restic password out of the password
+manager, which is the only copy of it left. `stack/backup/backup.sh`,
+`stack/compose.yaml` and the archive's own README still name all three by path. Day to
 day the Mac copy rides on iCloud, which is the backup story now.
+
+**The live Cloudflare tunnel on Block is a different tunnel and was not touched.**
+`/etc/cloudflared/token` is what `cloudflared.service` runs on, and it fronts teable and
+excalidash. Backstage only ever had routes on it, and those went during this teardown.
 
 ## What was removed
 
@@ -75,8 +80,8 @@ This bit again during the migration: the writing examples came off the share NFD
 every search-and-replace containing an accented character matched nothing until they
 were normalised with `unicodedata.normalize("NFC", name)`.
 
-## Reclaimable on Block, if you want the space
+## Reclaimable on Block
 
-Images `backstage:local` (1.17 GB) and `backstage-backup:local` (204 MB), and the
-docker volume `backstage_backstage-index`. The Pi is at 12 percent of 229 GB, so
-there is no pressure. Left in place deliberately.
+Nothing. The images `backstage:local` and `backstage-backup:local` and the volume
+`backstage_backstage-index` were listed here as left in place deliberately; they are
+gone as of 2026-09-25, reclaimed by something other than this teardown.
