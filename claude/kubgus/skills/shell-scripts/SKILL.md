@@ -39,7 +39,7 @@ never rely on the working directory. `readlink -f` and `realpath` are GNU-only:
 
 ## Portability
 
-macOS and Linux are both first-class. BSD against GNU is where it actually breaks:
+BSD against GNU is where portability actually breaks:
 
 | Trap | What bites |
 |---|---|

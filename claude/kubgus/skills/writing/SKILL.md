@@ -53,17 +53,15 @@ whatever drift they already carry.
 
 ## Language and register
 
-Slovak native, English and Czech bilingual. Match the register the relationship already
-established, not the one the genre suggests: do not formalise a thread that is already
-casual, or over-familiarise one that is not. **Ask through AskUserQuestion when register
-or language is ambiguous.**
+Match the register the relationship already established, not the one the genre suggests:
+do not formalise a thread that is already casual, or over-familiarise one that is not.
+**Ask when register or language is ambiguous.**
 
 Slovak specifics:
 
 - Capitalise `Vy` by addressee, not by formality. A group message takes lowercase `vám`; a
   message to one person takes capital `Vám`.
 - Collective nouns are singular - `tím` takes `rozhodol`, not `rozhodli`.
-- Dates are `DD. MM. YYYY` - a space after each period. `13. 09. 2026`, not `13.09.2026`.
 
 ## Genre guidelines
 

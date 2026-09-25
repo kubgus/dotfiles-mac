@@ -7,14 +7,12 @@ description: How Kubo wants generated files built, named and handed over. Use wh
 
 ## Decide before building
 
-- **Ambiguous format?** Ask once through AskUserQuestion, then proceed. A "report" could
-  be `.md`, `.docx` or `.pdf`, and the choice is his.
+- **Ambiguous format?** Ask once, then proceed. A "report" could be `.md`, `.docx` or
+  `.pdf`, and the choice is his.
 - **Read the format's own skill first** - `docx`, `pdf`, `xlsx`, `pptx`.
 - **Name the build approach, never pick it silently.** The axis is a Python library
   (openpyxl, python-docx) against hand-built OOXML plus `zip`. He may not want Python in
   play, and that is a decision rather than an implementation detail.
-- **Write for the document's audience, not your defaults.** A Slovak-audience document
-  takes `DD. MM. YYYY` and Slovak conventions throughout.
 - **Clean and professional** - neither overdesigned nor bare. No decoration that carries
   no information.
 
@@ -34,5 +32,3 @@ scripts. A project's own convention always wins over this one.
 
 Write it into the project and link a relative path. That file is the source of truth; a
 copy in chat is visibility, never a second place to edit.
-
-Third-party PII: ask before committing, naming the files.
