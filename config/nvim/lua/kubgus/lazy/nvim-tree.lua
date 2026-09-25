@@ -51,7 +51,8 @@ return {
             enable = true, -- highlight the current file in the tree
         },
         filters = {
-            dotfiles = true, -- hide dotfiles by default (toggle with H)
+            dotfiles = false, -- show dotfiles (toggle with H)
+            git_ignored = false, -- show gitignored files (toggle with I)
         },
         renderer = {
             group_empty = false,

@@ -5,7 +5,31 @@ return {
     dependencies = {
         "nvim-lua/plenary.nvim"
     },
-    opts = {},
+    opts = {
+        defaults = {
+            -- ripgrep skips hidden and gitignored files unless told otherwise;
+            -- the last glob keeps .git's own contents out of the results.
+            vimgrep_arguments = {
+                "rg",
+                "--color=never",
+                "--no-heading",
+                "--with-filename",
+                "--line-number",
+                "--column",
+                "--smart-case",
+                "--hidden",
+                "--no-ignore",
+                "--glob=!**/.git/*",
+            },
+            file_ignore_patterns = { "%.git/" },
+        },
+        pickers = {
+            find_files = {
+                hidden = true,
+                no_ignore = true,
+            },
+        },
+    },
     keys = {
         -- Find files in the current directory
         {
