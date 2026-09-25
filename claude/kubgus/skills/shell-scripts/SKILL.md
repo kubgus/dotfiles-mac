@@ -30,7 +30,8 @@ Match these rather than inventing a dialect:
 - `~/Dotfiles/_setup/lib.sh` - the `link_file` helper, and how repo root is resolved.
 - `~/Dotfiles/_setup/claude.sh` - a domain script, and `set_git_config` as the template
   for non-symlink idempotency.
-- `~/Dotfiles/claude/bell.sh` - a hook handler, and why it deviates from strict mode.
+- `~/Dotfiles/claude/kubgus/hooks-handlers/notify.sh` - a hook handler, and why it
+  deviates from strict mode.
 - `~/Dotfiles/bin/clc` - the larger end, Bash 3.2 compatible on purpose.
 
 Shell scripts in `~/Dotfiles` are checked with:
