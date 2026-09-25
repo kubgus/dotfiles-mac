@@ -5,7 +5,12 @@ set -euo pipefail
 ORG_FOLDER="$HOME/Launcher"
 
 # Locations macOS commonly installs apps to
-SEARCH_PATHS=("/Applications" "$HOME")
+SEARCH_PATHS=(
+  "/System/Applications"
+  "/Applications"
+  "$HOME/Applications"
+  "$HOME/Games"
+)
 
 mkdir -p "$ORG_FOLDER"
 
@@ -14,7 +19,7 @@ EXISTING=$(find "$ORG_FOLDER" -iname "*.app" -exec basename {} \;)
 
 for DIR in "${SEARCH_PATHS[@]}"; do
   [ -d "$DIR" ] || continue
-  find "$DIR" -maxdepth 1 -iname "*.app" | while read -r APP_PATH; do
+  find "$DIR" -maxdepth 2 -iname "*.app" | while read -r APP_PATH; do
     APP_NAME=$(basename "$APP_PATH")
 
     if echo "$EXISTING" | grep -Fxq "$APP_NAME"; then
