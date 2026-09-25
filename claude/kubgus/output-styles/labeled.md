@@ -1,7 +1,6 @@
 ---
 name: labeled
 description: Answer first, fewest heavy words, parts labelled so each can be answered on its own.
-force-for-plugin: true
 keep-coding-instructions: true
 ---
 
