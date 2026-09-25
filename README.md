@@ -72,36 +72,36 @@ stopped having an opinion about them. What is worth keeping - the context file, 
 status line script and the plugin - is linked individually, and Claude Code writes
 to none of it.
 
-**`clc` switches Claude Code accounts by moving `CLAUDE_CONFIG_DIR`.**
+**`claudeswitch` switches Claude Code accounts by moving `CLAUDE_CONFIG_DIR`.**
 Claude Code derives its Keychain item from a hash of that path, so pointing the
 variable at `~/.claude-accounts/<email>` is the entire account switch - no
 logging out, no credential shuffling, and the script only ever reads the
 Keychain. An account is named by its email and nothing else: the directory *is*
 the address, the account list *is* what is in `~/.claude-accounts/`, and the
 name on screen is read live from the account's own `.claude.json`, so there is
-no second name to keep in step. `clc add kubo@example.com` creates one and
-signs it in - the address has to be known up front, because renaming the
+no second name to keep in step. `claudeswitch add kubo@example.com` creates one
+and signs it in - the address has to be known up front, because renaming the
 directory afterwards would orphan the credentials keyed on it. The accounts
 are machine-local and untracked; this repo holds the command, not the logins.
 The status line names the live account by the initials of its display name, and
-reads `CLAUDE_CONFIG_DIR` to find it exactly as `clc` sets it, so the two cannot
-drift apart.
+reads `CLAUDE_CONFIG_DIR` to find it exactly as `claudeswitch` sets it, so the
+two cannot drift apart.
 
 **The switch is meant not to be felt, which is a denylist, not an allowlist.**
 Every entry in `~/.claude` is symlinked into each account except the few that
 cannot be shared, so transcripts, prompt history, file history, agents, skills,
 plugins, running sessions and background jobs are one set of files - and
-whatever a future Claude Code writes there is shared too, without `clc` needing
-to be taught about it. What stays per account: `daemon*` (a lock naming a live
-process, one per config dir), `policy-limits.json` and `remote-settings.json`
-(fetched from whichever org the account is in), `telemetry/`, `ide/` and
-`backups/`. The linking runs before every launch, so there is nothing to
-remember; `clc link` just does it on demand. `~/.claude.json` is the exception
-that cannot be symlinked, holding identity next to every preference - it is
-merged key by key instead, pulled in before a session and pushed back after,
-with `oauthAccount` and the org-scoped caches left where they are. Two accounts
-running at once means last writer wins, which is already true of that file
-between concurrent sessions of one account.
+whatever a future Claude Code writes there is shared too, without
+`claudeswitch` needing to be taught about it. What stays per account: `daemon*`
+(a lock naming a live process, one per config dir), `policy-limits.json` and
+`remote-settings.json` (fetched from whichever org the account is in),
+`telemetry/`, `ide/` and `backups/`. The linking runs before every launch, so
+there is nothing to remember; `claudeswitch link` just does it on demand.
+`~/.claude.json` is the exception that cannot be symlinked, holding identity
+next to every preference - it is merged key by key instead, pulled in before a
+session and pushed back after, with `oauthAccount` and the org-scoped caches
+left where they are. Two accounts running at once means last writer wins, which
+is already true of that file between concurrent sessions of one account.
 
 **The notification sounds have an off switch outside the repo.** Two hooks
 chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
@@ -126,8 +126,9 @@ and then reads only that copy. `install` and `update` both no-op on an unchanged
 version, so edits stay invisible with no warning that they are being ignored.
 Neither problem exists on this route, because nothing installs.
 
-`bin/clc` already symlinks `~/.claude/skills` into every account directory, so
-the plugin reaches all of them without `clc` being taught about it.
+`bin/claudeswitch` already symlinks `~/.claude/skills` into every account
+directory, so the plugin reaches all of them without `claudeswitch` being
+taught about it.
 
 **Nothing is ever pruned.** Setup creates and repairs symlinks but never
 removes them. Delete something from `bin/` and its link in `~/Bin` is left
@@ -151,7 +152,7 @@ shellcheck -x -e SC1071 _setup.sh _setup/*.sh claude/*.sh \
     claude/kubgus/hooks-handlers/*.sh bin/*
 ```
 
-`bin/clc` is Python rather than shell - it needs JSON, HTTPS, Unicode
+`bin/claudeswitch` is Python rather than shell - it needs JSON, HTTPS, Unicode
 normalisation and a handful of concurrent requests, which is more than shell
 should be asked to carry. `-e SC1071` is what stops `shellcheck` complaining
 about its shebang.

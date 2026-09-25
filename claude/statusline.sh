@@ -120,11 +120,11 @@ cost_part=""
 # --- 4. account initials ---
 # Which account this is, shortened to the initials of its display name: K,
 # JG, JG2. The payload carries no identity at all, so it comes from the config
-# directory the session was launched with - clc points CLAUDE_CONFIG_DIR at an
-# account, and each one keeps its own .claude.json inside it, while the default
-# account is the one that leaves the variable unset and keeps that file in
-# $HOME. Signed out, or signed in under no name, yields nothing and the segment
-# disappears rather than standing there empty.
+# directory the session was launched with - claudeswitch points
+# CLAUDE_CONFIG_DIR at an account, and each one keeps its own .claude.json
+# inside it, while the default account is the one that leaves the variable
+# unset and keeps that file in $HOME. Signed out, or signed in under no name,
+# yields nothing and the segment disappears rather than standing there empty.
 account_json="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
 initials=""
 if [ -r "$account_json" ]; then

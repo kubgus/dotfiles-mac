@@ -21,6 +21,6 @@ link_file "$DOTFILES_DIR/claude/statusline.sh" "$HOME/.claude/statusline.sh"
 # scaffolds and what a plugin you edit rather than consume wants. Installing it
 # from a marketplace instead would copy it into ~/.claude/plugins/cache/ and read
 # only that copy, so an edit here would stay invisible until the version changed.
-# ~/.claude/skills is already shared into every account dir by bin/clc, so this
-# reaches all of them without being taught about it.
+# ~/.claude/skills is already shared into every account dir by bin/claudeswitch,
+# so this reaches all of them without being taught about it.
 link_file "$DOTFILES_DIR/claude/kubgus" "$HOME/.claude/skills/kubgus"
