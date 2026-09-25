@@ -63,8 +63,7 @@ Slovak specifics:
 - Capitalise `Vy` by addressee, not by formality. A group message takes lowercase `vám`; a
   message to one person takes capital `Vám`.
 - Collective nouns are singular - `tím` takes `rozhodol`, not `rozhodli`.
-- Dates take a space after each period: `13. 09. 2026`, not `13.09.2026`.
-- Dates are `DD. MM. YYYY`, with a space after each period. `13. 09. 2026`, not `13.09.2026`.
+- Dates are `DD. MM. YYYY` - a space after each period. `13. 09. 2026`, not `13.09.2026`.
 
 ## Genre guidelines
 
