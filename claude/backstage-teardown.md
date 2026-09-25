@@ -1,127 +1,70 @@
-# Backstage teardown - what is left
+# Backstage - retired 2026-09-25
 
-The Mac side is done, as of 2026-09-25. This is the remainder: the Pi containers
-and the Cloudflare configuration in front of them. None of it is urgent - it
-costs nothing to leave running, and the library is still reachable over SSH,
-which is the point of keeping it.
+The MCP server that exposed the personal project library, the Samba share that mounted
+it at `/Volumes/backstage`, and everything in Cloudflare in front of them. All gone.
+This is the record of what was removed and what survived, because the runbook it came
+from lived inside the library it describes.
 
-This file lives here because the runbook it was distilled from lives *inside*
-the library it describes, and that becomes unreachable the moment the last of
-this is done.
-
-## What is still standing
+## What survived
 
 | | |
 |---|---|
-| Canonical library | `block.local:/home/kubgus/Claude` - **keep this**, it is the real copy |
-| Stack | `/home/kubgus/Containers/backstage` on the Pi |
-| Containers | `backstage` (MCP server), `backstage-smb` (Samba), `backstage-backup` (restic) |
-| Backup state | `/home/kubgus/Containers/backstage-backup-state`, outside the library |
-| Source repo | `git@gitlab.com:kubgus/backstage.git`, working copy `~/Documents/Code/backstage` |
-| Mac replica | `~/Documents/Claude` - 43 MB, now stale and no longer synced |
+| The library | `block.local:~/Claude`, 103 MB, still canonical. Reach it over SSH: `ssh -4 block.local` |
+| Old snapshots | 28 restic snapshots at `rclone:gdrive:Backups/backstage`, repo `01b50d2b7e`, last 2026-09-25 01:34 UTC |
+| The archived stack | `block.local:~/Archive/backstage/`, with its own README |
+| Source | `git@gitlab.com:kubgus/backstage.git`, working copy `~/Documents/Code/backstage` |
+| Mac replica | `~/Documents/Claude`, 43 MB, now stale and no longer synced |
 
-`ssh` needs `-4` on this network: `block.local` also resolves to an IPv6
-link-local address, and ssh tries that first and fails with "No route to host".
+**Nothing backs up `~/Claude` any more.** The backup container is gone with the rest.
+The 28 snapshots are a point-in-time copy, not a running backup. The repository
+password is in the password manager and in `~/Archive/backstage/backup-state/repo.password`;
+lose it and the snapshots are unrecoverable by any means.
 
-## Do this first, before anything is stopped
+## What was removed
 
-**Copy the restic repository password into the password manager.** A restic
-repository whose password is lost is not recoverable by any means, and this is
-the only copy:
+**On the Mac**: the `com.reynach.backstagemount` launchd agent and its plist,
+`~/Bin/backstagemount`, `~/Bin/claudelink`, `~/.config/backstage/smb-token.env`,
+18 MB of non-rotating logs, two hangs caches, the SMB keychain entry, the mount
+itself, and eight dangling `CLAUDE.local.md` symlinks across active repos.
 
-```sh
-ssh -4 block.local 'cat ~/Containers/backstage-backup-state/repo.password'
-```
+**On Block**: containers `backstage`, `backstage-smb` and `backstage-backup`, plus the
+`backstage_default` network. The stack and backup state moved to `~/Archive/backstage/`.
 
-Then take a final snapshot and prove it restores:
+**In Cloudflare**, all verified against the API response rather than the UI:
 
-```sh
-ssh -4 block.local 'cd ~/Containers/backstage && docker compose run --rm backup restic snapshots'
-ssh -4 block.local 'cd ~/Containers/backstage && docker compose run --rm backup restore-test'
-```
+- Access applications `Backstage` (`10c35b9c-...`) and `Backstage SMB` (`2634da24-...`)
+- Policies `Kubo only` (`0cb89bea-...`) and `SMB tunnel token` (`f6254753-...`)
+- Service token `backstage-smb` (`630cb5d0-...`), disabled first, then deleted
+- Tunnel routes `backstage.reynach.com` and `smb.reynach.com` on the Block tunnel
+- Both DNS records - now NXDOMAIN
 
-Repository is `01b50d2b7e` at `rclone:gdrive:Backups/backstage` - Google Drive,
-not R2. Done means the restore test passed, not that the snapshot ran.
+**Elsewhere**: the claude.ai connector, and the Teable `Central -> Services` row, which
+is marked Down rather than deleted because that table keeps retired services that way.
 
-## Order of operations
+## Three things worth keeping
 
-1. **Stop the two serving containers**, leave `backstage-backup` running so the
-   library keeps its history:
+**The dashboard reports success for work it did not do.** Deleting the service token
+showed no error and changed nothing; the API had returned
+`400 service_token_in_use`, visible only in the network log. The application editor
+has the same failure mode, recorded in the original runbook - a save spanning two
+tabs silently loses one. Check the response, not the UI.
 
-   ```sh
-   ssh -4 block.local 'cd ~/Containers/backstage && docker compose stop backstage backstage-smb'
-   ```
+**Delete routes before Access applications, not after.** Removing the apps first left
+both hostnames published with no authentication in front of them. Nothing was
+reachable because the containers were already stopped, but a restart would have
+exposed the MCP server - which can read and write the whole library - to the internet.
 
-   Verify the backup container is still up before moving on. If you want the
-   backups gone too, that is a separate decision - the library is still on the
-   Pi either way, and hourly snapshots are the only rollback for `.pii.` files,
-   which are git-ignored.
+**macOS stores filenames decomposed (NFD), Linux keeps the bytes it receives.** A
+Slovak filename made on the Mac arrives on Linux as a different file, so git reports
+the tracked name deleted with an untracked one beside it, and an rsync pull proposes a
+delete with no matching send, which is silent data loss. `core.precomposeunicode=true`
+hides it locally, which is why it stays invisible until two machines are involved.
+This bit again during the migration: the writing examples came off the share NFD, and
+every search-and-replace containing an accented character matched nothing until they
+were normalised with `unicodedata.normalize("NFC", name)`.
 
-2. **Remove the claude.ai connector** at claude.ai -> Settings -> Connectors,
-   entry "Backstage". Until this is gone it injects its instructions and 20 tool
-   definitions into every session that has it enabled, including Claude Code,
-   which picks it up automatically.
+## Reclaimable on Block, if you want the space
 
-3. **Cloudflare tunnel routes** - Zero Trust -> Networks -> Tunnels -> "Block":
-
-   - route to `backstage.reynach.com` -> `http://localhost:7259`
-   - route to `smb.reynach.com` -> the Samba container
-
-   Delete both, and their DNS records in the `reynach.com` zone.
-
-4. **Cloudflare Access applications** - Zero Trust -> Access -> Applications:
-
-   - "Backstage", id `10c35b9c-a735-4f09-943f-dd43904eee95`, with the policy
-     "Kubo only" (Emails include `gustafik@reynach.com`)
-   - "Backstage SMB", with the policy "SMB tunnel token" (Service Auth)
-
-   Save one tab at a time. The application editor spans two tabs behind a single
-   Save, and staging changes on both before saving loses them silently - no
-   error, and nothing in the audit log. Check the audit log filtered to the
-   application afterwards: a save that does not appear there did not happen.
-
-5. **Revoke the service token** `backstage-smb` - Zero Trust -> Access ->
-   Service credentials. It does not expire until 2027-09-21.
-
-   **Do this even if you stop here.** `cloudflared access tcp` ignores the
-   documented `TUNNEL_SERVICE_TOKEN_ID` and `_SECRET` environment variables, so
-   the wrapper passed them as flags, which put the secret in `ps` output on this
-   machine. Treat it as disclosed. The local copy of the token file is deleted;
-   the token itself is still valid until revoked here.
-
-6. **Three orphan OAuth clients** registered while debugging Managed OAuth are
-   still on the account. They grant nothing on their own - a token still has to
-   pass a policy - and removing them needs registration access tokens that were
-   not kept. Deleting the Access application above is what actually retires them.
-
-7. **Teable** - `Central -> Services`, row "Library MCP". Delete or mark retired.
-
-## If you ever want the mount back
-
-Do not. It was an SMB share over a Cloudflare Access TCP tunnel, and the
-measured cost was 9.6s for a recursive listing of `Projects/` against 0.12s to
-read a 250 KB file. Browsing or working out of it was painful, git across it was
-forbidden because `.git/index.lock` is unsafe over SMB, and it dropped on every
-deep sleep because an SMB session cannot survive one. The watchdog that put it
-back was 6 KB of bash guarding against a failure mode macOS created.
-
-SSH is the way in:
-
-```sh
-ssh -4 block.local
-cd ~/Claude
-```
-
-## One trap worth keeping
-
-macOS stores filenames decomposed (NFD), Linux keeps whatever bytes it receives.
-A Slovak filename created on the Mac arrives on the Pi as a *different* file, so
-git reports the tracked name deleted with an untracked one beside it, and an
-rsync pull proposes a delete with no matching send - which is silent data loss.
-`core.precomposeunicode=true` hides this locally, which is why it stays
-invisible until two machines are involved. Normalise with
-`unicodedata.normalize("NFC", name)` on both sides before trusting a sync.
-
-This bit during this migration too: the writing examples came off the share
-NFD-normalised, and every search-and-replace containing an accented character
-silently matched nothing until they were normalised first.
+Images `backstage:local` (1.17 GB) and `backstage-backup:local` (204 MB), and the
+docker volume `backstage_backstage-index`. The Pi is at 12 percent of 229 GB, so
+there is no pressure. Left in place deliberately.
