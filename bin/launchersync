@@ -14,22 +14,52 @@ SEARCH_PATHS=(
 
 mkdir -p "$ORG_FOLDER"
 
-# Build a list of app names that already have an alias somewhere inside ORG_FOLDER (recursively)
-EXISTING=$(find "$ORG_FOLDER" -iname "*.app" -exec basename {} \;)
+# What is already filed, keyed on the app each alias points at rather than its name:
+# Finder names an alias after the app's display name, which often differs from the
+# bundle ("FindMy.app" lands as "Find My.app", "Pages Creator Studio.app" as
+# "Pages.app"), and you are free to rename an alias once it is filed.
+EXISTING_TARGETS=$(osascript - "$ORG_FOLDER" <<'APPLESCRIPT'
+on run argv
+  -- No apostrophes below: bash 3.2 mis-parses one inside a heredoc inside $( )
+  set out to ""
+  tell application "Finder"
+    repeat with A in (get every alias file of entire contents of folder (POSIX file (item 1 of argv) as alias))
+      try
+        set out to out & (POSIX path of ((original item of (contents of A)) as alias)) & linefeed
+      end try
+    end repeat
+  end tell
+  return out
+end run
+APPLESCRIPT
+)
+EXISTING_TARGETS=$(printf '%s' "$EXISTING_TARGETS" | sed 's:/*$::')
+
+# Fallback for the handful of aliases whose target Finder will not hand back - Safari,
+# for one, resolves into a cryptex. Without this they would be re-added on every run.
+EXISTING_NAMES=$(find "$ORG_FOLDER" -iname "*.app" -exec basename {} \;)
 
 for DIR in "${SEARCH_PATHS[@]}"; do
   [ -d "$DIR" ] || continue
-  find "$DIR" -maxdepth 2 -iname "*.app" | while read -r APP_PATH; do
+  while IFS= read -r APP_PATH; do
     APP_NAME=$(basename "$APP_PATH")
 
-    if echo "$EXISTING" | grep -Fxq "$APP_NAME"; then
+    if grep -Fxq "$APP_PATH" <<< "$EXISTING_TARGETS" || grep -Fxq "$APP_NAME" <<< "$EXISTING_NAMES"; then
       continue
     fi
 
-    osascript -e "tell application \"Finder\" to make alias file to POSIX file \"$APP_PATH\" at POSIX file \"$ORG_FOLDER\"" > /dev/null
+    osascript - "$APP_PATH" "$ORG_FOLDER" > /dev/null <<'APPLESCRIPT'
+on run argv
+  tell application "Finder" to make alias file to POSIX file (item 1 of argv) at POSIX file (item 2 of argv)
+end run
+APPLESCRIPT
+
+    # Keep the run self-consistent: the same app can sit in two search paths
+    EXISTING_TARGETS+=$'\n'"$APP_PATH"
+    EXISTING_NAMES+=$'\n'"$APP_NAME"
 
     echo "Added: $APP_NAME"
-  done
+  done < <(find "$DIR" -maxdepth 2 -iname "*.app")
 done
 
 echo "Done. New apps were added to $ORG_FOLDER."
