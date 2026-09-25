@@ -27,4 +27,4 @@ for DIR in "${SEARCH_PATHS[@]}"; do
   done
 done
 
-echo "Done. New apps were added to $ORG_FOLDER. Sort them into subfolders any time; re-running this script will skip anything already filed."
+echo "Done. New apps were added to $ORG_FOLDER."
