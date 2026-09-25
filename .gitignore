@@ -1,4 +1,5 @@
 config/*
+!config/git
 !config/gtk-3.0
 !config/nvim
 !config/opencode
