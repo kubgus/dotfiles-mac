@@ -30,7 +30,7 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `_setup/` | One script per domain, plus `lib.sh`. |
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
-| `claude/` | Claude Code: the global context file, settings, and the status line. |
+| `claude/` | Claude Code: the global context file and the status line. |
 | `claude/kubgus/` | The `kubgus` plugin - output style, skills, hooks, MCP servers. |
 | `claude/backstage-teardown.md` | What is left of the retired backstage library, and the order to take it down in. |
 | `pi/` | Pi agent config. |
@@ -42,7 +42,7 @@ Each is a script in `_setup/`, runnable on its own:
 
 - **`config`** - `~/.config`
 - **`shell`** - `~/.zprofile`, and everything in `bin/`
-- **`claude`** - Claude Code context file, settings, and the `kubgus` plugin
+- **`claude`** - Claude Code context file, status line, and the `kubgus` plugin
 - **`pi`** - Pi agent config
 
 `_setup/lib.sh` holds `link_file`, the one helper every domain needs. A helper
@@ -58,36 +58,19 @@ so anything not whitelisted still works locally, it just isn't tracked.
 session state, telemetry and caches. Only the portable files are tracked;
 `auth.json`, `sessions/` and `npm/` stay machine-local.
 
-**`/model` and `/effort` are not repo changes.** Claude Code writes the live
-model and reasoning effort back into `settings.json`, and that file is this
-repo's by symlink, so every switch used to surface as a working-tree diff. A
-`clean` filter, declared in `.gitattributes` and pointed at
-`claude/settings-clean.sh`, drops both on the way into git and re-emits the rest
-at a fixed indent with sorted keys - the working file keeps everything, the
-commit never sees them, and neither does a reindent by Claude Code's own
-in-place editor. Effort is written twice, once as a top-level `effortLevel` and
-once under `modelSettings` keyed by the model it was chosen for, so both go; an
-entry left holding nothing else is dropped rather than emptied, because the
-model's name is session state too and keeping it would make the first effort
-change on a newly used model read as an edit. The blob is a projection of the
-file rather than a copy of it, which is the price of the whole thing being
-quiet. Registering the filter is `_setup/claude.sh`'s job because git refuses to
-read filter definitions out of the repository that ships them; they run
-arbitrary commands. That refusal is silent, so on a clone that has not been set
-up yet, staging the file commits the live model and effort - run
-`./_setup.sh claude` first. Once registered it is marked `required`, so a filter
-that breaks fails the stage loudly instead of quietly committing more than it
-should.
+**`settings.json` is deliberately not tracked.** Claude Code owns that file and
+rewrites it in place - `/config`, `/model`, `/effort` and `/output-style` all write
+to it, and an atomic write replaces a symlink with a real file rather than following
+it. Tracking it cost a `clean` filter to hide the session state, a `.gitattributes`
+entry, per-clone filter registration because git will not read filter definitions
+out of the repository that ships them, and a link that broke silently every time
+`/config` ran - after which the repo and the live file drifted with nothing to
+signal it. That drift is what the filter was really hiding.
 
-The quiet is not total. `git diff` and `git commit` see nothing after a switch,
-but `git status` still can: git skips the filter outright when a file's byte
-length has changed, so a model name of a different length shows as a phantom
-modification - dirty marker in the status line included - until the next
-`git add` clears it. It never becomes a commit; there is no content there to
-commit. The other edge is that the blob is the stripped form, so
-`git checkout -- claude/settings.json` hands back a file with no model or effort
-in it. Claude Code falls back to its defaults and writes them again on the next
-switch, so it costs a preference rather than a working config.
+The settings are a handful of preferences and a few clicks to restore, so the repo
+stopped having an opinion about them. What is worth keeping - the context file, the
+status line script and the plugin - is linked individually, and Claude Code writes
+to none of it.
 
 **`clc` switches Claude Code accounts by moving `CLAUDE_CONFIG_DIR`.**
 Claude Code derives its Keychain item from a hash of that path, so pointing the
@@ -141,10 +124,7 @@ Installing it from a marketplace instead - which is the obvious-looking route -
 copies the plugin into `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`
 and then reads only that copy. `install` and `update` both no-op on an unchanged
 version, so edits stay invisible with no warning that they are being ignored.
-Worse, a `claude plugin` command that writes settings replaces the
-`~/.claude/settings.json` symlink with a real file, which is how that file
-drifted out of this repo before. Neither problem exists on this route, because
-nothing installs and nothing writes.
+Neither problem exists on this route, because nothing installs.
 
 `bin/clc` already symlinks `~/.claude/skills` into every account directory, so
 the plugin reaches all of them without `clc` being taught about it.

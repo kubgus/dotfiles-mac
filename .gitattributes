@@ -1,5 +1,0 @@
-# Claude Code writes the live model and reasoning effort back into its settings
-# file, which is this repo's by symlink. The clean filter keeps those two keys
-# out of what git sees, so switching either is not a repo change. It has to be
-# registered per clone - see _setup/claude.sh and claude/settings-clean.sh.
-claude/settings.json filter=claude-settings
