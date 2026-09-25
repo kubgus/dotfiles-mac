@@ -9,7 +9,17 @@
 # that found everything already in place.
 set -euo pipefail
 
-SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/_setup" && pwd)"
+# Resolve this file through any symlink chain before anchoring on it. A link in
+# ~/Bin would otherwise make this resolve to ~ rather than the repo, silently.
+# `readlink -f` and `realpath` are GNU-only, so walk the chain by hand.
+_src="${BASH_SOURCE[0]}"
+while [ -L "$_src" ]; do
+    _dir="$(cd -P "$(dirname "$_src")" && pwd)"
+    _src="$(readlink "$_src")"
+    case "$_src" in /*) ;; *) _src="$_dir/$_src" ;; esac
+done
+SETUP_DIR="$(cd -P "$(dirname "$_src")/_setup" && pwd)"
+unset _src _dir
 
 available() {
     local f name

@@ -1,4 +1,5 @@
 #!/bin/sh
+# No pipefail: this is /bin/sh, where it is not POSIX.
 set -e
 
 brew update
