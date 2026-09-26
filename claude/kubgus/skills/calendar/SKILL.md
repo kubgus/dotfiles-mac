@@ -12,9 +12,11 @@ Everything is in one SQLite file that Calendar.app keeps synced:
 ```
 
 `~/Library/Calendars/` is empty on current macOS - it is the old location and a dead
-end. There is no EventKit call and no AppleScript here: `scripts/cal.py` snapshots the
-store and reads the snapshot, so it cannot corrupt anything, never races Calendar.app,
-and never trips an Automation prompt.
+end. There is no EventKit call and no AppleScript here: `scripts/cal.py` opens that file
+`mode=ro`, takes an atomic SQLite backup of it into a private temp directory, reads the
+copy and deletes it on the way out. So it never races Calendar.app, never trips an
+Automation prompt, leaves nothing on disk, and cannot write to your calendar even with
+a bug in it - the source handle refuses writes at the SQLite level, not by convention.
 
 ```
 scripts/cal.py event <ical:// link or id>    one event in full

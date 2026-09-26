@@ -9,6 +9,7 @@ access. See SKILL.md for the timestamp traps this encodes.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -140,12 +141,19 @@ def item_span(row) -> tuple[datetime, datetime]:
 # --- store access -----------------------------------------------------------------
 
 
-def snapshot() -> str:
-    """Copy the store (plus its WAL) somewhere disposable and return the copy.
+@contextlib.contextmanager
+def connect():
+    """Snapshot the live store into a private temp file and hand back a connection.
 
-    The live file is WAL-mode and locked by Calendar.app, and recent changes sit in
-    the -wal sidecar rather than the main file. Copying all three and opening the
-    copy read-write lets SQLite replay the WAL, so the snapshot is current.
+    SQLite's own backup API rather than a file copy, for three reasons. It is atomic,
+    so it cannot catch Calendar.app mid-checkpoint and produce a snapshot whose -wal
+    disagrees with its main file. It opens the source `mode=ro`, so this cannot write
+    to your calendar even by accident. And it lands one file instead of three, in a
+    directory that is removed on the way out whatever happens.
+
+    Snapshotting costs about 25 ms on an 18 MB store, which is cheap enough that
+    caching it between runs is not worth leaving 18 MB of your calendar sitting in
+    the temp directory indefinitely.
     """
     if not os.path.exists(STORE):
         sys.exit(
@@ -153,35 +161,36 @@ def snapshot() -> str:
             "Open Calendar.app once to create it, or grant this terminal Full Disk Access."
         )
 
-    src_wal = STORE + "-wal"
-    stamp = str(
-        (
-            os.path.getmtime(STORE),
-            os.path.getsize(STORE),
-            os.path.getmtime(src_wal) if os.path.exists(src_wal) else 0,
-        )
-    )
-    cache = os.path.join(tempfile.gettempdir(), "claude-calendar-snapshot")
-    db = os.path.join(cache, "Calendar.sqlitedb")
-    stamp_path = os.path.join(cache, "stamp")
+    sweep_legacy_cache()
+    work = tempfile.mkdtemp(prefix="claude-calendar-")
+    try:
+        uri = "file:" + STORE.replace("?", "%3f").replace("#", "%23") + "?mode=ro"
+        try:
+            source = sqlite3.connect(uri, uri=True)
+        except sqlite3.OperationalError as exc:
+            sys.exit(
+                f"Cannot read {STORE}: {exc}\n"
+                "Most likely this terminal lacks Full Disk Access."
+            )
+        conn = sqlite3.connect(os.path.join(work, "snapshot.sqlite"))
+        try:
+            source.backup(conn)
+        finally:
+            source.close()
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
 
-    if os.path.exists(stamp_path) and open(stamp_path).read() == stamp:
-        return db
 
-    shutil.rmtree(cache, ignore_errors=True)
-    os.makedirs(cache, exist_ok=True)
-    for suffix in ("", "-wal", "-shm"):
-        if os.path.exists(STORE + suffix):
-            shutil.copy2(STORE + suffix, db + suffix)
-    with open(stamp_path, "w") as fh:
-        fh.write(stamp)
-    return db
-
-
-def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(snapshot())
-    conn.row_factory = sqlite3.Row
-    return conn
+def sweep_legacy_cache() -> None:
+    """Remove the persistent snapshot an older version of this script left behind."""
+    stale = os.path.join(tempfile.gettempdir(), "claude-calendar-snapshot")
+    if os.path.isdir(stale):
+        shutil.rmtree(stale, ignore_errors=True)
 
 
 def store_age(conn) -> str:
