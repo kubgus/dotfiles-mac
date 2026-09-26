@@ -1,0 +1,38 @@
+# Calendar skill configuration.
+#
+# Read from, in order: --config PATH, $CLAUDE_CALENDAR_CONFIG, this file.
+# Anything left out falls back to the defaults in cal.py.
+
+# Hidden from a plain agenda. Exact calendar titles.
+hide_titles = [
+    "SK Namesdays",
+    "Sviatky na Slovensku",
+    "Birthdays",
+]
+
+# Substrings matched case-insensitively against each calendar's title, its account
+# name, and its CalDAV path. Google keeps rooms and equipment under
+# resource.calendar.google.com while real shared calendars sit on
+# group.calendar.google.com, so one pattern hides every room you will ever book -
+# including ones added after this file was written.
+hide_matching = [
+    "resource.calendar.google.com",
+]
+
+# Hide events the source system marked Free. Note that this flag says how a calendar
+# was configured, not whether you are occupied: Google marks the whole Druzinovky
+# series Free while the room copies come through Busy. --show-free overrides.
+hide_free = true
+
+# ...except the ones you personally accepted. Your RSVP is the only field in the store
+# that records your own intent rather than a source system's default, so it outranks
+# the Free flag. Without this, Potáborovica - accepted, three days, at the klubovňa -
+# vanishes from every agenda because the zbor calendar defaults its series to Free.
+keep_accepted = true
+
+# Hide events you declined. You said no; they are not commitments. --show-declined
+# brings them back. On the Skyro timetable this is roughly half the week.
+hide_declined = true
+
+# Default clock window for `free`.
+day_window = "08:00-22:00"

@@ -1,0 +1,93 @@
+{
+  "skill_name": "calendar",
+  "note": "Assertions as of the final iteration. Two of them are negative and came from Kubo's review: never mention declined events, never editorialise a free slot.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "pasted-link",
+      "prompt": "can you read ical://occurrence/7A781B40-A37B-40B5-9032-1350C4EC2267?method=show&options=more",
+      "assertions": [
+        {
+          "text": "Identifies the event title as 'Dážď Pred-HROM Strategy Call'"
+        },
+        {
+          "text": "States the date as 2026-08-29 (Saturday)"
+        },
+        {
+          "text": "States the time as 16:00-16:30 local, NOT 14:00-14:30 UTC"
+        },
+        {
+          "text": "Names the calendar as Modry Oblak"
+        },
+        {
+          "text": "Surfaces the Google Meet link meet.google.com/mxf-kgue-yea"
+        },
+        {
+          "text": "Lists attendees including dazd@modryoblak.sk and jakub.gustafik@modryoblak.sk"
+        },
+        {
+          "text": "Does not claim it cannot read ical:// URLs and stop there"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "week-agenda",
+      "prompt": "what have I got on next week? I only care about stuff I actually have to show up to",
+      "assertions": [
+        {
+          "text": "Covers Mon 2026-09-28 through Sun 2026-10-04, not the current week"
+        },
+        {
+          "text": "Includes 'PAP - 3. 4. roč' on Mon 2026-09-28 at 09:50"
+        },
+        {
+          "text": "Includes 'Kontrola u ocneho' on Fri 2026-10-02 at 10:15"
+        },
+        {
+          "text": "Lists each event once, not once per room-resource calendar"
+        },
+        {
+          "text": "Never mentions declined events or the word 'declined'"
+        },
+        {
+          "text": "All times are local (CEST): Skyro classes start 09:00 or 09:50, not 07:00 or 07:50"
+        },
+        {
+          "text": "Shows Potáborovica across Fri 2026-10-02 to Sun 2026-10-04, so the weekend does not read as empty"
+        },
+        {
+          "text": "Keeps the time-name-place line shape; no per-day prose paragraphs or advice"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "free-slots",
+      "prompt": "I need to fit a 90 minute call in on thursday, when am I free",
+      "assertions": [
+        {
+          "text": "Resolves 'thursday' to 2026-10-01"
+        },
+        {
+          "text": "Offers the 10:35-14:45 window"
+        },
+        {
+          "text": "Offers the 15:30 onwards window without caveating it"
+        },
+        {
+          "text": "Every slot offered is at least 90 minutes long"
+        },
+        {
+          "text": "Does not offer a slot overlapping RPG English 09:00-10:35 or PaP 14:45-15:30"
+        },
+        {
+          "text": "Never mentions the Družinovky, the Free flag, or which slot is best"
+        }
+      ],
+      "files": []
+    }
+  ]
+}
