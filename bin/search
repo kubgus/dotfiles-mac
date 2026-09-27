@@ -11,12 +11,23 @@
 # what turns the printed path into a cd, and this file is the half of it that
 # can be read and shellchecked on its own.
 #
-# So stdout carries the chosen directory and nothing else - usage and the
-# confirmation from --add go to stderr - and that function can take the whole
+# So stdout carries the chosen directory and nothing else - usage, and the
+# confirmation from --add, go to stderr - and that function can take the whole
 # of stdout without having to tell a path from chatter.
 set -euo pipefail
 
 MARKER=".search_marker"
+
+# How many directory levels below the root to look. A home directory is a
+# second and a half of walking without a limit and a quarter of that with one,
+# and a destination worth marking is rarely buried deeper than this.
+DEFAULT_DEPTH=5
+
+# Directory names never to walk into: colon-separated globs, matched against a
+# directory's own name the way find's -name matches it. SEARCH_IGNORE replaces
+# this outright rather than adding to it, so what you set is the whole list,
+# and setting it empty walks everything.
+IGNORE="${SEARCH_IGNORE-node_modules:.*}"
 
 prog="${0##*/}"
 
@@ -26,14 +37,73 @@ die() {
 }
 
 usage() {
-    echo "usage: $prog [dir]"
+    echo "usage: $prog [-d depth] [dir]"
     echo "       $prog -a | --add [dir]"
     echo
-    echo "  -a, --add    mark dir as a destination and exit (default: .)"
-    echo "  -h, --help   show this"
+    echo "  -d, --depth N  search N levels below dir (default: $DEFAULT_DEPTH)"
+    echo "  -a, --add      mark dir as a destination and exit (default: .)"
+    echo "  -h, --help     show this"
     echo
     echo "With no flag, pick a marked directory below dir (default: .) and"
     echo "print it. Exits 1 when nothing below dir is marked."
+    echo
+    echo "SEARCH_IGNORE holds colon-separated globs of directory names not to"
+    echo "walk into, and replaces rather than extends the default:"
+    echo "  node_modules:.*"
+}
+
+ignore_names=()
+if [ -n "$IGNORE" ]; then
+    # An empty field - a stray or doubled colon - would become -name '' and
+    # match nothing, so they are dropped rather than passed on to find.
+    while [ -n "$IGNORE" ]; do
+        field="${IGNORE%%:*}"
+        [ -z "$field" ] || ignore_names+=("$field")
+        case "$IGNORE" in
+            *:*) IGNORE="${IGNORE#*:}" ;;
+            *) IGNORE="" ;;
+        esac
+    done
+fi
+
+# True when a single directory name is one of the ignored globs.
+ignored_name() {
+    local name="$1" pattern
+    [ ${#ignore_names[@]} -gt 0 ] || return 1
+    for pattern in "${ignore_names[@]}"; do
+        # Unquoted on purpose: the entry is a glob and has to match as one,
+        # exactly as find's -name would treat it.
+        # shellcheck disable=SC2254
+        case "$name" in
+            $pattern) return 0 ;;
+        esac
+    done
+    return 1
+}
+
+add_marker() {
+    local target="$1" abs rest component
+    [ -d "$target" ] || die "not a directory: $target"
+
+    abs="$(cd -P "$target" && pwd)"
+
+    # search never descends into an ignored directory, so a marker anywhere
+    # beneath one is a destination that can never be picked. Refuse to write a
+    # marker that would not work rather than leave one that silently does not.
+    rest="$abs"
+    while [ -n "$rest" ] && [ "$rest" != "/" ]; do
+        component="${rest##*/}"
+        if ignored_name "$component"; then
+            die "'$component' is ignored, so a marker under it would never be found - set SEARCH_IGNORE to search it"
+        fi
+        rest="${rest%/*}"
+    done
+
+    if [ -e "$target/$MARKER" ]; then
+        exit 0
+    fi
+    : > "$target/$MARKER"
+    echo "Marked $target" >&2
 }
 
 case "${1:-}" in
@@ -43,41 +113,87 @@ case "${1:-}" in
         ;;
     -a|--add)
         shift
-        target="${1:-.}"
-        [ -d "$target" ] || die "not a directory: $target"
-        if [ -e "$target/$MARKER" ]; then
-            exit 0
-        fi
-        : > "$target/$MARKER"
-        echo "Marked $target" >&2
+        add_marker "${1:-.}"
         exit 0
-        ;;
-    -*)
-        die "unknown flag: $1"
         ;;
 esac
 
-root="${1:-.}"
+depth="$DEFAULT_DEPTH"
+root="."
+root_given=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -d|--depth)
+            [ $# -ge 2 ] || die "$1 needs a number"
+            depth="$2"
+            shift 2
+            ;;
+        -*)
+            die "unknown flag: $1"
+            ;;
+        *)
+            [ -z "$root_given" ] || die "only one directory, got '$root' and '$1'"
+            root="$1"
+            root_given=yes
+            shift
+            ;;
+    esac
+done
+
+case "$depth" in
+    ''|*[!0-9]*) die "depth must be a whole number, got '$depth'" ;;
+esac
+
 [ -d "$root" ] || die "not a directory: $root"
 
 command -v fzf >/dev/null 2>&1 \
     || die "fzf not found - install it with: brew install fzf"
 
-# Markers never live inside either of these, and walking them is most of what
-# a search over a working tree would otherwise cost.
-marked="$(
-    find "$root" \
-        -type d \( -name .git -o -name node_modules \) -prune \
-        -o -type f -name "$MARKER" -print \
-        | sed -e "s#/$MARKER\$##" -e 's#^\./##'
-)"
+# -mindepth 1 keeps the root out of the ignore test. Without it a root of '.'
+# matches the '.*' glob, gets pruned before the walk starts, and search finds
+# nothing wherever you run it.
+#
+# -maxdepth counts the marker file, which sits one level below the directory
+# being offered, so a depth of 5 has to let find reach 6.
+find_args=("$root" -mindepth 1 -maxdepth "$((depth + 1))")
 
-[ -n "$marked" ] || die "nothing marked below $root - mark a directory with: $prog --add"
+if [ ${#ignore_names[@]} -gt 0 ]; then
+    prune_expr=()
+    for name in "${ignore_names[@]}"; do
+        [ ${#prune_expr[@]} -eq 0 ] || prune_expr+=(-o)
+        prune_expr+=(-name "$name")
+    done
+    find_args+=(-type d "(" "${prune_expr[@]}" ")" -prune -o)
+fi
 
-# fzf leaves with 130 when the picker is cancelled. That deserves no message,
-# but it must not read as a successful pick either, so the status carries
-# through and the shell function skips the cd.
-selected="$(printf '%s\n' "$marked" | fzf --height=40% --reverse --prompt='search> ')" \
-    || exit $?
+find_args+=(-type f -name "$MARKER" -print)
+
+# fzf draws as input arrives, so the walk streams into it rather than being
+# collected first: on a large tree the picker is up and usable while find is
+# still running, which is most of what made this feel slow.
+#
+# Reading one line before handing the rest over is what keeps an empty tree
+# distinguishable from a pick that matched nothing - fzf leaves with 1 either
+# way. 3 is not a status fzf uses, so it can mean "nothing was marked".
+#
+# find's own status is dropped because an unreadable subdirectory is no reason
+# to fail a pick, and pipefail would otherwise make it one.
+status=0
+selected="$(
+    { find "${find_args[@]}" 2>/dev/null || true; } \
+        | sed -e "s#/$MARKER\$##" -e 's#^\./##' \
+        | {
+            IFS= read -r first || exit 3
+            { printf '%s\n' "$first"; cat; } \
+                | fzf --height=40% --reverse --prompt='search> '
+        }
+)" || status=$?
+
+case "$status" in
+    0) ;;
+    3) die "nothing marked within $depth levels of $root - mark a directory with: $prog --add" ;;
+    *) exit "$status" ;;
+esac
 
 printf '%s\n' "$selected"

@@ -89,6 +89,10 @@ alias gt="git tag"
 # bin/search does the picking and prints where to go; only a shell function can
 # actually move this shell there. `command` reaches past this function to the
 # script of the same name. Empty output means --add or --help ran, not a pick.
+#
+# Export SEARCH_IGNORE here to change which directory names are skipped - it is
+# a colon-separated list of globs and replaces the default, node_modules:.*
+# rather than adding to it.
 search() {
   local dir
   dir="$(command search "$@")" || return
