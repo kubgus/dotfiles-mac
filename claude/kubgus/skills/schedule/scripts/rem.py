@@ -28,7 +28,7 @@ STORE_DIR = os.path.expanduser(
 
 # Deliberately inert: with no config the script hides nothing beyond what is provably
 # gone (tombstones), so what you see is what the store holds. Every opinion about
-# which lists are noise lives in config.toml, the one file allowed to be personal.
+# which lists are noise lives in reminders.config.toml, the one file allowed to be personal.
 DEFAULTS = {
     "hide_lists": [],
     "hide_matching": [],
@@ -44,7 +44,7 @@ def load_config(explicit: str | None = None) -> dict:
         explicit
         or os.environ.get("CLAUDE_REMINDERS_CONFIG")
         or os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.toml"
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reminders.config.toml"
         )
     )
     cfg = dict(DEFAULTS)
@@ -733,7 +733,7 @@ def cmd_lists(conn, args):
             label = f"{row['group_name']} / {label}"
         bits = [b for b in (kind, row["account"], f"{n} open" if n else "") if b]
         print(f"{mark} {label}  -  {' · '.join(bits)}" if bits else f"{mark} {label}")
-    print("\n(- means hidden by config.toml; --all includes them)")
+    print("\n(- means hidden by reminders.config.toml; --all includes them)")
 
 
 # --- cli --------------------------------------------------------------------------
@@ -747,7 +747,7 @@ def main():
     )
     common.add_argument("--flat", action="store_true", help="subtasks on their own lines")
     common.add_argument("--json", action="store_true")
-    common.add_argument("--config", help="path to a config.toml overriding the defaults")
+    common.add_argument("--config", help="path to a config file overriding the defaults")
     common.add_argument("--store", help="path to a specific Reminders store")
 
     p = argparse.ArgumentParser(

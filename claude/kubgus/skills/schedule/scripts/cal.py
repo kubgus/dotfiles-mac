@@ -26,7 +26,7 @@ STORE = os.path.expanduser(
 
 # Deliberately inert: with no config the script hides nothing and filters nothing, so
 # what you see is what the store holds. Every opinion about which calendars are noise
-# lives in config.toml, which is the file that is allowed to be personal.
+# lives in calendar.config.toml, which is the file that is allowed to be personal.
 DEFAULTS = {
     "hide_titles": [],
     "hide_matching": [],
@@ -41,7 +41,7 @@ def load_config(explicit: str | None = None) -> dict:
     path = (
         explicit
         or os.environ.get("CLAUDE_CALENDAR_CONFIG")
-        or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.toml")
+        or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "calendar.config.toml")
     )
     cfg = dict(DEFAULTS)
     if os.path.exists(path):
@@ -1055,7 +1055,7 @@ def main():
     )
     common.add_argument("--no-dedupe", action="store_true", help="one row per calendar copy")
     common.add_argument("--json", action="store_true")
-    common.add_argument("--config", help="path to a config.toml overriding the defaults")
+    common.add_argument("--config", help="path to a config file overriding the defaults")
 
     p = argparse.ArgumentParser(
         prog="cal.py", description=__doc__.splitlines()[0], parents=[common]
