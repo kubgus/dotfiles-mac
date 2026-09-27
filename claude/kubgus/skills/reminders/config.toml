@@ -1,0 +1,34 @@
+# Reminders skill configuration.
+#
+# Read from, in order: --config PATH, $CLAUDE_REMINDERS_CONFIG, this file.
+# Anything left out falls back to the defaults in rem.py.
+#
+# Unlike the calendar store, nothing here is provably wallpaper - there is no
+# equivalent of a nameday feed or a Google room calendar that is noise by
+# construction. So this file starts almost empty on purpose: every list you own is
+# a list you made. Add to it when a view is actually in your way, not pre-emptively.
+
+# Hidden from the default views. Exact list names.
+hide_lists = [
+    # "Long-term",  # 18 of 33 open items; a someday bucket, not a workload
+    # "Shopping",
+]
+
+# Substrings matched case-insensitively against the list name, its group, and its
+# account. Matching the group is the useful one: hiding "Inbox" retires every list
+# under it, including ones added after this file was written.
+hide_matching = []
+
+# Smart lists are saved searches, not containers. Their contents already live on a
+# real list, so counting them means counting the same reminder twice.
+hide_smart_lists = true
+
+# Print subtasks under their parent rather than as independent tasks. --flat overrides.
+nest_subtasks = true
+
+# Default window for `due`. Overdue is added on top of this regardless; --no-overdue
+# drops it.
+due_window = "today"
+
+# Default window for `done`.
+done_window = "-7d"

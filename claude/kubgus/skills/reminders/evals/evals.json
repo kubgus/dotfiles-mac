@@ -1,0 +1,66 @@
+{
+  "skill_name": "reminders",
+  "note": "Assertions are deliberately structural - list names, conventions and behaviour - rather than quotes of individual tasks, so the suite does not rot every time something gets ticked off and no task content lands in git history. Counts are marked with the date they were true. The negative assertions never age: never rank or advise, never let a completed reminder read as open, never answer a task question from the calendar skill.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "due-with-overdue",
+      "prompt": "what do I need to do today?",
+      "assertions": [
+        { "text": "Runs scripts/rem.py rather than querying the store with hand-written SQL or reading Reminders.app" },
+        { "text": "Leads with anything already overdue, under its own heading, before today's items" },
+        { "text": "Reports each all-day reminder on the date the store holds, not a day either side of it" },
+        { "text": "Passes on the trailing count of open reminders with no due date" },
+        { "text": "Does not rank the items, suggest an order, or say which is most urgent" },
+        { "text": "Does not answer from the calendar skill or present calendar events as tasks" }
+      ],
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "open-by-list",
+      "prompt": "what's on my plate right now, all of it",
+      "assertions": [
+        { "text": "Reports a figure in the low tens, not several hundred - 33 open as of 2026-09-27 against 685 rows in the store" },
+        { "text": "Groups by list and uses the real list names: Frontline, Waiting, Backlog, Leads, Planned, Long-term, Short-term" },
+        { "text": "Treats Tasks and Inbox as groups containing lists, not as lists holding reminders" },
+        { "text": "Contains no completed reminders" },
+        { "text": "Counts no reminder twice via a smart list" },
+        { "text": "Keeps the one-line-per-task shape; no per-list prose paragraphs and no advice about what to tackle first" }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "recurrence-detail",
+      "prompt": "which of my open reminders are set to repeat, and how often?",
+      "assertions": [
+        { "text": "Names the repeating reminders and states each interval, e.g. every 3 weeks rather than just 'repeating'" },
+        { "text": "Does not claim it cannot read Reminders and stop there" },
+        { "text": "Does not offer to create, move or complete anything" }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "completed-not-open",
+      "prompt": "is there anything I marked done in the last fortnight that I should double check?",
+      "assertions": [
+        { "text": "Distinguishes completed reminders from open ones and dates each completion" },
+        { "text": "Never presents a completed reminder as still outstanding" },
+        { "text": "Does not silently include the completed ones in a count of open work" }
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "empty-store-trap",
+      "prompt": "how many reminders do I have?",
+      "assertions": [
+        { "text": "Does not report zero or near-zero - that is the signature of reading one of the three empty decoy stores" },
+        { "text": "Distinguishes open reminders from the total row count if it quotes both" }
+      ],
+      "files": []
+    }
+  ]
+}
