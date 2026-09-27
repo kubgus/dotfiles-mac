@@ -1,0 +1,60 @@
+#!/bin/bash
+# Install an Epic Games Store title into ~/Games with one command, by way of
+# Legendary - so no Epic launcher is needed to fetch a game or to run it.
+#
+# The game is named the way Legendary names it, and anything after the name is
+# handed straight to `legendary install`:
+#
+#   epicget hades
+#   epicget "world of goo" --skip-dlc
+#
+# Set EPICGET_GAMES_DIR to install somewhere other than ~/Games. Legendary
+# holds the Epic login itself, so nothing about the account lives here.
+set -euo pipefail
+
+GAMES_DIR="${EPICGET_GAMES_DIR:-$HOME/Games}"
+
+prog="${0##*/}"
+
+die() {
+    echo "$prog: $1" >&2
+    exit 1
+}
+
+usage() {
+    echo "usage: $prog <game name> [legendary install flags...]"
+    echo "       $prog --list"
+    echo "       $prog --installed"
+    echo
+    echo "  --list       list every game in the Epic library"
+    echo "  --installed  list installed games and check them for updates"
+    echo "  -h, --help   show this"
+    echo
+    echo "Installs into $GAMES_DIR; set EPICGET_GAMES_DIR to change that."
+}
+
+command -v legendary >/dev/null 2>&1 \
+    || die "legendary not found - install it with: pipx install legendary-gl"
+
+case "${1:-}" in
+    ""|-h|--help)
+        usage
+        exit 0
+        ;;
+    --list)
+        legendary list
+        exit 0
+        ;;
+    --installed)
+        legendary list-installed --check-updates
+        exit 0
+        ;;
+esac
+
+game="$1"
+shift
+
+mkdir -p "$GAMES_DIR"
+
+echo "Installing '$game' into $GAMES_DIR"
+legendary install "$game" --base-path "$GAMES_DIR" "$@"
