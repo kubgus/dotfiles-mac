@@ -84,6 +84,19 @@ alias gla="git log --all --oneline --graph --decorate" # git log all
 alias gt="git tag"
 
 # -----------------------
+# Jump to a marked directory
+# -----------------------
+# bin/search does the picking and prints where to go; only a shell function can
+# actually move this shell there. `command` reaches past this function to the
+# script of the same name. Empty output means --add or --help ran, not a pick.
+search() {
+  local dir
+  dir="$(command search "$@")" || return
+  [ -n "$dir" ] || return 0
+  cd "$dir" || return
+}
+
+# -----------------------
 # Add user binaries to PATH
 # -----------------------
 export PATH="$HOME/Bin:$PATH"

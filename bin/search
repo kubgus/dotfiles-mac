@@ -1,0 +1,83 @@
+#!/bin/bash
+# Jump to a directory you marked earlier, from anywhere above it.
+#
+# A directory becomes a destination once it holds a .search_marker file, so the
+# list you pick from is the one you built on purpose rather than every folder
+# in the tree. `search --add` places a marker; `search` picks one below the
+# working directory with fzf and prints it.
+#
+# Printing is all this can do: a script on PATH runs in its own process and
+# cannot move the shell that called it. The `search` function in zprofile is
+# what turns the printed path into a cd, and this file is the half of it that
+# can be read and shellchecked on its own.
+#
+# So stdout carries the chosen directory and nothing else - usage and the
+# confirmation from --add go to stderr - and that function can take the whole
+# of stdout without having to tell a path from chatter.
+set -euo pipefail
+
+MARKER=".search_marker"
+
+prog="${0##*/}"
+
+die() {
+    echo "$prog: $1" >&2
+    exit 1
+}
+
+usage() {
+    echo "usage: $prog [dir]"
+    echo "       $prog -a | --add [dir]"
+    echo
+    echo "  -a, --add    mark dir as a destination and exit (default: .)"
+    echo "  -h, --help   show this"
+    echo
+    echo "With no flag, pick a marked directory below dir (default: .) and"
+    echo "print it. Exits 1 when nothing below dir is marked."
+}
+
+case "${1:-}" in
+    -h|--help)
+        usage >&2
+        exit 0
+        ;;
+    -a|--add)
+        shift
+        target="${1:-.}"
+        [ -d "$target" ] || die "not a directory: $target"
+        if [ -e "$target/$MARKER" ]; then
+            exit 0
+        fi
+        : > "$target/$MARKER"
+        echo "Marked $target" >&2
+        exit 0
+        ;;
+    -*)
+        die "unknown flag: $1"
+        ;;
+esac
+
+root="${1:-.}"
+[ -d "$root" ] || die "not a directory: $root"
+
+command -v fzf >/dev/null 2>&1 \
+    || die "fzf not found - install it with: brew install fzf"
+
+# Markers never live inside either of these, and walking them is most of what
+# a search over a working tree would otherwise cost.
+marked="$(
+    find "$root" \
+        -type d \( -name .git -o -name node_modules \) -prune \
+        -o -type f -name "$MARKER" -print \
+        | sed -e "s#/$MARKER\$##" -e 's#^\./##'
+)"
+
+[ -n "$marked" ] || die "nothing marked below $root - mark a directory with: $prog --add"
+
+# fzf leaves with 130 when the picker is cancelled. That deserves no message,
+# but it must not read as a successful pick either, so the status carries
+# through and the shell function skips the cd.
+selected="$(printf '%s\n' "$marked" | fzf --height=40% --reverse --prompt='search> ')" \
+    || exit $?
+
+printf '%s\n' "$selected"
