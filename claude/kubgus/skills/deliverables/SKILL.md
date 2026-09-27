@@ -67,6 +67,18 @@ spend boldness in one place and keep everything around it quiet. His working mat
 earns restraint, not timidity - a page that reads as a template is the failure mode the
 skill exists to prevent.
 
+### Reading it on a phone
+
+`artifact-design`'s phone-width rule missed both of these. Check at 320px, and rotate it.
+
+- **A height measured from content goes stale when the width changes.** Size a textarea
+  from `scrollHeight` once at load and a rotate, or a column collapsing, silently clips
+  it. A `ResizeObserver` on the container - not on the element you are resizing - catches
+  every cause at once.
+- **`nowrap` on anything that can hold a long string takes the row off the page.** A grid
+  or flex child defaults to `min-width: auto`, so its min-content width forces the track
+  wider than the viewport. `min-width: 0` on the child, and let it wrap.
+
 ### Local file or published artifact
 
 Default to a local file in the project, even though the Artifact tool leans hard the other
