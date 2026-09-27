@@ -18,11 +18,6 @@ set -euo pipefail
 
 MARKER=".search_marker"
 
-# How many directory levels below the root to look. A home directory is a
-# second and a half of walking without a limit and a quarter of that with one,
-# and a destination worth marking is rarely buried deeper than this.
-DEFAULT_DEPTH=5
-
 # Directory names never to walk into: colon-separated globs, matched against a
 # directory's own name the way find's -name matches it. SEARCH_IGNORE replaces
 # this outright rather than adding to it, so what you set is the whole list,
@@ -40,7 +35,7 @@ usage() {
     echo "usage: $prog [-d depth] [dir]"
     echo "       $prog -a | --add [dir]"
     echo
-    echo "  -d, --depth N  search N levels below dir (default: $DEFAULT_DEPTH)"
+    echo "  -d, --depth N  look no more than N levels below dir (default: all)"
     echo "  -a, --add      mark dir as a destination and exit (default: .)"
     echo "  -h, --help     show this"
     echo
@@ -118,7 +113,11 @@ case "${1:-}" in
         ;;
 esac
 
-depth="$DEFAULT_DEPTH"
+# Empty means no limit: the whole tree below the root is walked. That is a
+# couple of seconds over a home directory, which streaming into fzf hides -
+# the picker is up and filling the whole time. --depth is for when it does not
+# hide it, and cuts a home directory to well under a second.
+depth=""
 root="."
 root_given=""
 
@@ -141,9 +140,11 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-case "$depth" in
-    ''|*[!0-9]*) die "depth must be a whole number, got '$depth'" ;;
-esac
+if [ -n "$depth" ]; then
+    case "$depth" in
+        *[!0-9]*) die "depth must be a whole number, got '$depth'" ;;
+    esac
+fi
 
 [ -d "$root" ] || die "not a directory: $root"
 
@@ -153,10 +154,11 @@ command -v fzf >/dev/null 2>&1 \
 # -mindepth 1 keeps the root out of the ignore test. Without it a root of '.'
 # matches the '.*' glob, gets pruned before the walk starts, and search finds
 # nothing wherever you run it.
-#
+find_args=("$root" -mindepth 1)
+
 # -maxdepth counts the marker file, which sits one level below the directory
-# being offered, so a depth of 5 has to let find reach 6.
-find_args=("$root" -mindepth 1 -maxdepth "$((depth + 1))")
+# being offered, so a --depth of 5 has to let find reach 6.
+[ -z "$depth" ] || find_args+=(-maxdepth "$((depth + 1))")
 
 if [ ${#ignore_names[@]} -gt 0 ]; then
     prune_expr=()
@@ -192,7 +194,12 @@ selected="$(
 
 case "$status" in
     0) ;;
-    3) die "nothing marked within $depth levels of $root - mark a directory with: $prog --add" ;;
+    3)
+        if [ -n "$depth" ]; then
+            die "nothing marked within $depth levels of $root - mark a directory with: $prog --add"
+        fi
+        die "nothing marked below $root - mark a directory with: $prog --add"
+        ;;
     *) exit "$status" ;;
 esac
 
