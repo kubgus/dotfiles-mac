@@ -84,12 +84,15 @@ three places the corner costs something.
 - **Baked notes seed storage only when the page has none.** Namespace the store by the
   page's own identity rather than its filename, so a renamed or moved export still finds
   its notes. The price is that an export opened beside its original meets the notes
-  already there - and on a browser that pools every `file://` document into one origin,
-  that is the ordinary case for a local file rather than a rare one. So the collision
-  costs a glance, never a dismissal: the browser's notes stay live and untouched, one
-  quiet line at the top says what the file carries and offers to take it instead, and
-  ignoring that line is a correct way to use the page. Never merge silently - that is the
-  Import failure again - but never make him clear something away to read his own page.
+  already there. Chrome pools every `file://` document into one origin whatever directory
+  it sits in - tested, not assumed - so on his machine that is the ordinary case for a
+  local file and not a rare one. Safari is unverified and may refuse `file://` storage
+  outright rather than share it, which the try/catch rule above already absorbs. So the
+  collision costs a glance and never a dismissal: the browser's notes stay live and
+  untouched, one quiet line at the top says what the file carries and offers to take it
+  instead, and ignoring that line is a correct way to use the page. Never merge silently -
+  that is the Import failure again - but never make him clear something away to read his
+  own page.
 - **Name it as a deliverable** - `Title Case With Spaces - YYYY-MM-DD.html`. The date
   earns its place here, because he will export the same page more than once.
 - **The download can fail.** It is inert inside the Artifact sandbox and a blocked blob
