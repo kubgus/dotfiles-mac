@@ -14,11 +14,10 @@ import json
 import os
 import re
 import shutil
-import sqlite3
 import subprocess
 import sys
 import tempfile
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 STORE = os.path.expanduser(
     "~/Library/Group Containers/group.com.apple.calendar/Calendar.sqlitedb"
@@ -37,21 +36,40 @@ DEFAULTS = {
 }
 
 
-def load_config(explicit: str | None = None) -> dict:
-    path = (
-        explicit
-        or os.environ.get("CLAUDE_CALENDAR_CONFIG")
-        or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "calendar.config.toml")
-    )
-    cfg = dict(DEFAULTS)
-    if os.path.exists(path):
-        import tomllib
+# --- shared with rem.py, see store.py ----------------------------------------------
 
-        with open(path, "rb") as fh:
-            cfg.update(tomllib.load(fh))
-    elif explicit:
-        sys.exit(f"No config at {path}")
-    return cfg
+from store import MAC_EPOCH, elsewhere, floating, local, tidy  # noqa: E402
+import store  # noqa: E402
+
+
+@contextlib.contextmanager
+def connect():
+    """Guard the store exists, sweep the legacy cache, then snapshot it."""
+    if not os.path.exists(STORE):
+        sys.exit(
+            f"No calendar store at {STORE}\n"
+            "Open Calendar.app once to create it, or grant this terminal Full Disk Access."
+        )
+    sweep_legacy_cache()
+    with store.snapshot(STORE, "claude-calendar-") as conn:
+        yield conn
+
+
+def store_age(conn) -> str:
+    return store.store_age(STORE, ("-wal",))
+
+
+def parse_when(text: str | None) -> tuple[date, date]:
+    return store.parse_when(text)
+
+
+def extract_id(text: str) -> str:
+    """Google event ids are case-significant and links carry a query string."""
+    return store.extract_id(text, strip_query=True)
+
+
+def load_config(explicit: str | None = None) -> dict:
+    return store.load_config(DEFAULTS, "CLAUDE_CALENDAR_CONFIG", "calendar.config.toml", explicit)
 
 
 def hidden(row, cfg) -> bool:
@@ -71,7 +89,6 @@ def hidden(row, cfg) -> bool:
 
 # ----------------------------------------------------------------------------------
 
-MAC_EPOCH = 978307200  # 2001-01-01T00:00:00Z, Apple's reference date
 
 STATUS = {0: "", 1: "confirmed", 2: "tentative", 3: "cancelled"}
 # Observed in this store rather than documented by Apple; --json exposes the raw code.
@@ -87,7 +104,6 @@ CONF_LINK = re.compile(
     r"|teams\.microsoft\.com/l/meetup-join/[^\s>\"]+"
     r"|[\w.-]*whereby\.com/[^\s>\"]+)"
 )
-UUID_RE = re.compile(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}")
 
 
 # --- time -------------------------------------------------------------------------
@@ -99,18 +115,8 @@ UUID_RE = re.compile(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{
 # is uniform: every column there is a real instant, and `day` is local midnight.
 
 
-def local(ts: float) -> datetime:
-    """A real instant -> local wall clock."""
-    return datetime.fromtimestamp(ts + MAC_EPOCH)
 
 
-def floating(ts: float) -> datetime:
-    """A naive/floating value -> the wall clock it literally encodes.
-
-    Read at UTC and stripped back to naive, because the number is not an instant at
-    all: it is "midnight", and which midnight depends on where you are standing.
-    """
-    return datetime.fromtimestamp(ts + MAC_EPOCH, timezone.utc).replace(tzinfo=None)
 
 
 def mac(dt: datetime) -> float:
@@ -118,18 +124,6 @@ def mac(dt: datetime) -> float:
     return dt.timestamp() - MAC_EPOCH
 
 
-def elsewhere(tz: str, when: datetime) -> bool:
-    """True if `tz` is a real zone whose clock differs from yours at that moment."""
-    if not tz or tz in ("_float", "GMT"):
-        return False
-    try:
-        from zoneinfo import ZoneInfo
-
-        theirs = when.replace(tzinfo=None).astimezone(ZoneInfo(tz)).utcoffset()
-        mine = when.astimezone().utcoffset()
-        return theirs != mine
-    except Exception:
-        return False
 
 
 def item_span(row) -> tuple[datetime, datetime]:
@@ -141,49 +135,6 @@ def item_span(row) -> tuple[datetime, datetime]:
 # --- store access -----------------------------------------------------------------
 
 
-@contextlib.contextmanager
-def connect():
-    """Snapshot the live store into a private temp file and hand back a connection.
-
-    SQLite's own backup API rather than a file copy, for three reasons. It is atomic,
-    so it cannot catch Calendar.app mid-checkpoint and produce a snapshot whose -wal
-    disagrees with its main file. It opens the source `mode=ro`, so this cannot write
-    to your calendar even by accident. And it lands one file instead of three, in a
-    directory that is removed on the way out whatever happens.
-
-    Snapshotting costs about 25 ms on an 18 MB store, which is cheap enough that
-    caching it between runs is not worth leaving 18 MB of your calendar sitting in
-    the temp directory indefinitely.
-    """
-    if not os.path.exists(STORE):
-        sys.exit(
-            f"No calendar store at {STORE}\n"
-            "Open Calendar.app once to create it, or grant this terminal Full Disk Access."
-        )
-
-    sweep_legacy_cache()
-    work = tempfile.mkdtemp(prefix="claude-calendar-")
-    try:
-        uri = "file:" + STORE.replace("?", "%3f").replace("#", "%23") + "?mode=ro"
-        try:
-            source = sqlite3.connect(uri, uri=True)
-        except sqlite3.OperationalError as exc:
-            sys.exit(
-                f"Cannot read {STORE}: {exc}\n"
-                "Most likely this terminal lacks Full Disk Access."
-            )
-        conn = sqlite3.connect(os.path.join(work, "snapshot.sqlite"))
-        try:
-            source.backup(conn)
-        finally:
-            source.close()
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-        finally:
-            conn.close()
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
 
 
 def sweep_legacy_cache() -> None:
@@ -193,16 +144,6 @@ def sweep_legacy_cache() -> None:
         shutil.rmtree(stale, ignore_errors=True)
 
 
-def store_age(conn) -> str:
-    wal = STORE + "-wal"
-    newest = max(
-        os.path.getmtime(STORE),
-        os.path.getmtime(wal) if os.path.exists(wal) else 0,
-    )
-    delta = datetime.now() - datetime.fromtimestamp(newest)
-    if delta > timedelta(hours=12):
-        return f"store last written {datetime.fromtimestamp(newest):%Y-%m-%d %H:%M}"
-    return ""
 
 
 def cache_window(conn) -> tuple[date, date]:
@@ -213,46 +154,6 @@ def cache_window(conn) -> tuple[date, date]:
 # --- date ranges ------------------------------------------------------------------
 
 
-def parse_when(text: str | None) -> tuple[date, date]:
-    """Return an inclusive [first, last] local date range."""
-    today = date.today()
-    if not text:
-        return today, today
-
-    t = text.strip().lower()
-    simple = {
-        "today": (0, 0),
-        "tomorrow": (1, 1),
-        "yesterday": (-1, -1),
-    }
-    if t in simple:
-        lo, hi = simple[t]
-        return today + timedelta(days=lo), today + timedelta(days=hi)
-
-    if t in ("week", "this-week", "thisweek"):
-        start = today - timedelta(days=today.weekday())
-        return start, start + timedelta(days=6)
-    if t in ("next-week", "nextweek"):
-        start = today - timedelta(days=today.weekday()) + timedelta(days=7)
-        return start, start + timedelta(days=6)
-    if t in ("last-week", "lastweek"):
-        start = today - timedelta(days=today.weekday()) - timedelta(days=7)
-        return start, start + timedelta(days=6)
-    if t in ("month", "this-month"):
-        start = today.replace(day=1)
-        nxt = (start + timedelta(days=32)).replace(day=1)
-        return start, nxt - timedelta(days=1)
-
-    if ".." in t:
-        a, b = t.split("..", 1)
-        return parse_when(a)[0], parse_when(b)[1]
-
-    m = re.fullmatch(r"([+-])(\d+)d", t)
-    if m:
-        n = int(m.group(2))
-        return (today, today + timedelta(days=n)) if m.group(1) == "+" else (today - timedelta(days=n), today)
-
-    return date.fromisoformat(t), date.fromisoformat(t)
 
 
 # --- reading occurrences ----------------------------------------------------------
@@ -625,9 +526,6 @@ def clean_notes(text: str) -> tuple[str, list[str]]:
 # --- rendering --------------------------------------------------------------------
 
 
-def tidy(text: str) -> str:
-    """One line, no runs of whitespace. Locations arrive with embedded newlines."""
-    return re.sub(r"\s+", " ", (text or "")).strip()
 
 
 def short_location(text: str, limit: int = 44) -> str:
@@ -904,11 +802,6 @@ def synthetic(row) -> list[dict]:
     ]
 
 
-def extract_id(text: str) -> str:
-    m = UUID_RE.search(text or "")
-    if m:
-        return m.group(0)
-    return (text or "").strip().rstrip("/").split("/")[-1].split("?")[0]
 
 
 ITEM_SQL = """

@@ -15,12 +15,10 @@ import glob
 import json
 import os
 import re
-import shutil
 import sqlite3
 import subprocess
 import sys
-import tempfile
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime
 
 STORE_DIR = os.path.expanduser(
     "~/Library/Group Containers/group.com.apple.reminders/Container_v1/Stores"
@@ -39,23 +37,34 @@ DEFAULTS = {
 }
 
 
-def load_config(explicit: str | None = None) -> dict:
-    path = (
-        explicit
-        or os.environ.get("CLAUDE_REMINDERS_CONFIG")
-        or os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reminders.config.toml"
-        )
-    )
-    cfg = dict(DEFAULTS)
-    if os.path.exists(path):
-        import tomllib
+# --- shared with cal.py, see store.py ----------------------------------------------
 
-        with open(path, "rb") as fh:
-            cfg.update(tomllib.load(fh))
-    elif explicit:
-        sys.exit(f"No config at {path}")
-    return cfg
+from store import elsewhere, floating, local, tidy  # noqa: E402
+import store  # noqa: E402
+
+
+@contextlib.contextmanager
+def connect(path: str):
+    with store.snapshot(path, "claude-reminders-") as conn:
+        yield conn
+
+
+def store_age(path: str) -> str:
+    return store.store_age(path, ("-wal", "-shm"))
+
+
+def parse_when(text: str | None) -> tuple[date, date]:
+    """`all` is meaningful here: most of this store is undated."""
+    return store.parse_when(text, allow_all=True)
+
+
+def extract_id(text: str) -> str:
+    """Matched case-insensitively against both the CloudKit and the local id."""
+    return store.extract_id(text, lower=True)
+
+
+def load_config(explicit: str | None = None) -> dict:
+    return store.load_config(DEFAULTS, "CLAUDE_REMINDERS_CONFIG", "reminders.config.toml", explicit)
 
 
 def hidden(row, cfg) -> bool:
@@ -75,7 +84,6 @@ def hidden(row, cfg) -> bool:
     return any(p.lower() in haystack for p in cfg["hide_matching"])
 
 
-MAC_EPOCH = 978307200  # 2001-01-01T00:00:00Z, Apple's reference date
 
 # 0/1/5/9 is Apple's CalDAV priority scale, not a 1-3 enum. Nothing in between is
 # used by Reminders.app, but the column is an int and a synced client could write one.
@@ -87,9 +95,6 @@ PRIORITY_NAME = {1: "high", 5: "medium", 9: "low"}
 FREQUENCY = {0: "daily", 1: "weekly", 2: "monthly", 3: "yearly"}
 PROXIMITY = {1: "arriving at", 2: "leaving"}
 
-UUID_RE = re.compile(
-    r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
-)
 
 
 # --- time -------------------------------------------------------------------------
@@ -100,27 +105,10 @@ UUID_RE = re.compile(
 # it to local time shifts it by your UTC offset and lands it on the wrong day.
 
 
-def local(ts: float) -> datetime:
-    """A real instant -> local wall clock."""
-    return datetime.fromtimestamp(ts + MAC_EPOCH)
 
 
-def floating(ts: float) -> datetime:
-    """A naive/floating value -> the wall clock it literally encodes."""
-    return datetime.fromtimestamp(ts + MAC_EPOCH, timezone.utc).replace(tzinfo=None)
 
 
-def elsewhere(tz: str, when: datetime) -> bool:
-    """True if `tz` is a real zone whose clock differs from yours at that moment."""
-    if not tz or tz in ("_float", "GMT"):
-        return False
-    try:
-        from zoneinfo import ZoneInfo
-
-        theirs = when.replace(tzinfo=None).astimezone(ZoneInfo(tz)).utcoffset()
-        return theirs != when.astimezone().utcoffset()
-    except Exception:
-        return False
 
 
 def due_at(row) -> datetime | None:
@@ -175,45 +163,8 @@ def pick_store(explicit: str | None = None) -> str:
     return best
 
 
-@contextlib.contextmanager
-def connect(path: str):
-    """Snapshot the live store into a private temp file and hand back a connection.
-
-    SQLite's own backup API rather than a file copy: it is atomic, so it cannot catch
-    Reminders mid-checkpoint and produce a snapshot whose -wal disagrees with its main
-    file; it opens the source mode=ro, so this cannot write to your reminders even
-    with a bug in it; and it lands one file instead of three, in a directory removed
-    on the way out whatever happens.
-    """
-    work = tempfile.mkdtemp(prefix="claude-reminders-")
-    try:
-        uri = "file:" + path.replace("?", "%3f").replace("#", "%23") + "?mode=ro"
-        try:
-            source = sqlite3.connect(uri, uri=True)
-        except sqlite3.OperationalError as exc:
-            sys.exit(f"Cannot read {path}: {exc}\nMost likely this terminal lacks Full Disk Access.")
-        conn = sqlite3.connect(os.path.join(work, "snapshot.sqlite"))
-        try:
-            source.backup(conn)
-        finally:
-            source.close()
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-        finally:
-            conn.close()
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
 
 
-def store_age(path: str) -> str:
-    newest = max(
-        os.path.getmtime(path),
-        *(os.path.getmtime(path + s) for s in ("-wal", "-shm") if os.path.exists(path + s)),
-    )
-    if datetime.now() - datetime.fromtimestamp(newest) > timedelta(hours=12):
-        return f"store last written {datetime.fromtimestamp(newest):%Y-%m-%d %H:%M}"
-    return ""
 
 
 def entities(conn) -> dict[str, int]:
@@ -231,46 +182,6 @@ def entities(conn) -> dict[str, int]:
 # --- date ranges ------------------------------------------------------------------
 
 
-def parse_when(text: str | None) -> tuple[date, date]:
-    """Return an inclusive [first, last] local date range."""
-    today = date.today()
-    if not text:
-        return today, today
-
-    t = text.strip().lower()
-    simple = {"today": (0, 0), "tomorrow": (1, 1), "yesterday": (-1, -1)}
-    if t in simple:
-        lo, hi = simple[t]
-        return today + timedelta(days=lo), today + timedelta(days=hi)
-
-    if t in ("week", "this-week", "thisweek"):
-        start = today - timedelta(days=today.weekday())
-        return start, start + timedelta(days=6)
-    if t in ("next-week", "nextweek"):
-        start = today - timedelta(days=today.weekday()) + timedelta(days=7)
-        return start, start + timedelta(days=6)
-    if t in ("last-week", "lastweek"):
-        start = today - timedelta(days=today.weekday()) - timedelta(days=7)
-        return start, start + timedelta(days=6)
-    if t in ("month", "this-month"):
-        start = today.replace(day=1)
-        nxt = (start + timedelta(days=32)).replace(day=1)
-        return start, nxt - timedelta(days=1)
-    if t in ("all", "ever"):
-        return date(1970, 1, 1), date(2999, 12, 31)
-
-    if ".." in t:
-        a, b = t.split("..", 1)
-        return parse_when(a)[0], parse_when(b)[1]
-
-    m = re.fullmatch(r"([+-])(\d+)d", t)
-    if m:
-        n = int(m.group(2))
-        if m.group(1) == "+":
-            return today, today + timedelta(days=n)
-        return today - timedelta(days=n), today
-
-    return date.fromisoformat(t), date.fromisoformat(t)
 
 
 # --- reading ----------------------------------------------------------------------
@@ -398,8 +309,6 @@ def nest(items: list[dict], cfg, args) -> list[dict]:
 # --- rendering --------------------------------------------------------------------
 
 
-def tidy(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "")).strip()
 
 
 def first_line(text: str, limit: int = 60) -> str:
@@ -696,11 +605,6 @@ def reveal(hit):
     subprocess.run(["open", f"x-apple-reminderkit://REMCDReminder/{hit['uuid']}"], check=False)
 
 
-def extract_id(text: str) -> str:
-    m = UUID_RE.search(text or "")
-    if m:
-        return m.group(0).lower()
-    return (text or "").strip().lower().rsplit("/", 1)[-1]
 
 
 def cmd_lists(conn, args):

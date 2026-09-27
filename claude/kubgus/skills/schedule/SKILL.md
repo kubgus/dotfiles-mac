@@ -29,6 +29,11 @@ the way out. So neither races the app that owns the file, neither trips an Autom
 prompt, neither leaves anything on disk, and neither can write even with a bug in it -
 the source handle refuses writes at the SQLite level rather than by convention.
 
+That snapshot, the two timestamp conventions, the date vocabulary and config loading
+live once in `scripts/store.py`. Both CLIs are thin over it. Anything that knows a
+schema stays in the script that owns it, so a change to how a store is read safely is
+one edit rather than two that drift.
+
 `when` takes the same vocabulary on both: `today`, `tomorrow`, `yesterday`, `week`,
 `next-week`, `last-week`, `month`, `2026-10-03`, `2026-10-01..2026-10-07`, `+14d`,
 `-30d`, and mixed ranges like `today..+14d`. Flags work on either side of the
