@@ -9,7 +9,9 @@ point is that what he types survives the page being regenerated:
   number silently land on the wrong item.
 - **Wrap every read and write in try/catch** and render correctly with storage blocked.
   A private window or cleared site data must degrade to a page that still works, not a
-  blank one.
+  blank one. Say so on the page when it happens. A browser that refuses `localStorage` on
+  `file://` swallows every note silently otherwise, and Export is then the only way
+  anything at all survives the tab closing.
 - **Let him type a note next to the thing it is about.** A box on the row beats scrolling
   to a form at the bottom. Autosave it, confirm quietly, and drop the key entirely when
   the note is emptied so a round-trip out and back changes nothing.
@@ -46,22 +48,32 @@ under them, this one acts on the document.
   and the page boots from it. Serializing the live DOM alone loses every `<textarea>` he
   typed into, because a typed value never reaches `outerHTML` - it is exactly the content
   being exported that goes missing. Escape `<` as `\u003c` on the way in, or the first
-  note containing `</script>` closes the block early and takes the page with it.
+  note containing a closing script tag ends the block early and takes the page with it.
+  Written here as `<\/script>` on purpose: the bare form terminates a `<script>` element
+  from inside a string or a comment just as readily, so this warning copied verbatim into
+  the page is itself the bug.
 - **Exactly one baked block, replaced rather than appended.** The export rebuilds it from
   current storage, which is what makes an export of an export carry the notes as they are
   now. Append instead and a few generations down which block wins is a coin flip.
-- **Write the values into the markup as well**, then let an idempotent boot re-render over
-  them from the data. Costs a few bytes and buys a file that still reads correctly when
-  the script does not run at all.
+- **Write the per-row values into the markup as well**, then boot idempotently over them.
+  Idempotent structurally and not only by value: an exported file already carries the note
+  boxes in its markup, so a boot that creates one per row appends a second. Reuse the box
+  that is there, create only where none is. The few bytes buy a file that still reads
+  correctly when the script does not run at all.
 - **Reset transient state before serializing** - close the panel, drop focus, clear any
-  mid-edit styling. Otherwise the file opens frozen in whatever the moment of export
-  happened to look like.
-- **Baked notes seed storage only when the page has none.** Namespace that storage by the
+  mid-edit styling, or the file opens frozen in whatever the moment of export happened to
+  look like. The text block is derived, so clear it outright - `textContent`, not just
+  `value` - and let boot rebuild it. Bake the render as it stood and the field ships
+  disagreeing with the data behind it.
+- **Baked notes seed storage only when the page has none.** Namespace the store by the
   page's own identity rather than its filename, so a renamed or moved export still finds
-  its notes - which also means an export opened in the browser it came from meets the
-  notes already there. When the two differ, do not merge: one line at the top naming the
-  conflict, the file's count against the browser's, and he picks. Silently overwriting
-  work done since the export is the Import failure all over again.
+  its notes. The price is that an export opened beside its original meets the notes
+  already there - and on a browser that pools every `file://` document into one origin,
+  that is the ordinary case for a local file rather than a rare one. So the collision
+  costs a glance, never a dismissal: the browser's notes stay live and untouched, one
+  quiet line at the top says what the file carries and offers to take it instead, and
+  ignoring that line is a correct way to use the page. Never merge silently - that is the
+  Import failure again - but never make him clear something away to read his own page.
 - **Name it as a deliverable** - `Title Case With Spaces - YYYY-MM-DD.html`. The date
   earns its place here, because he will export the same page more than once.
 - **The download can fail.** It is inert inside the Artifact sandbox and a blocked blob
