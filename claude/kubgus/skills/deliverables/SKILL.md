@@ -11,8 +11,6 @@ description: How Kubo wants generated files built, named and handed over. Use wh
   `.pdf`, and the choice is his.
 - **Read the format's own skill first** - `docx`, `pdf`, `xlsx`, `pptx`; `dataviz` before
   the first line of any chart, in any medium; for HTML the pair named under *HTML pages*.
-  These names point outside this plugin deliberately. Naming them is worth more than the
-  self-containment, so leave them where they are rather than tidying them into prose.
 - **Name the build approach, never pick it silently.** The axis is a Python library
   (openpyxl, python-docx) against hand-built OOXML plus `zip`. He may not want Python in
   play, and that is a decision rather than an implementation detail.
@@ -42,14 +40,27 @@ copy in chat is visibility, never a second place to edit.
 
 A page he opens and reads is a deliverable like any other, so everything above applies -
 `Title Case With Spaces.html`, written into the project, handed over as a relative path.
-Three skills split a page between them and none covers the other two:
+Three skills split a page between them, with no overlap:
 
 - **`frontend-design`** owns the look - palette, typefaces, the hero, the layout concept,
   the copy on the page.
 - **`artifact-design`** owns the page contract - tokens, both themes, libraries, layout,
   the responsive floor, title and favicon. It also calls how much design effort the page
   deserves; let that call set how heavy the `frontend-design` pass is.
-- **This section** owns what neither assumes: that the file stays local.
+- **This section** owns what neither covers: where the file ends up, what breaks once it
+  is a local file, and the specific ways his pages have actually failed.
+
+### Local file or published artifact
+
+Default to a local file in the project, even though the Artifact tool leans hard the other
+way. Publishing sends the content to claude.ai, where a link shares it further, and most
+of what he asks for is his own working material.
+
+Publish only when he asks, or when the page is plainly for other people and carries
+nothing private. **Ask first - always - when the page carries third-party personal data:**
+names of minors, parents' phone numbers, anything from a roster or a form. Build it
+locally, say why, and offer the artifact in one line. His standing rule that PII is his to
+share and not yours holds here exactly as it does for a commit.
 
 ### The look
 
@@ -62,10 +73,9 @@ nothing, confirm nothing, just build from what he asked for.
 Skip the skill entirely for a page that exists to be read once and closed. A table dumped
 to HTML because the terminal mangles it is not a design brief.
 
-Where it and *Clean and professional* above pull apart, its own resolution settles it:
-spend boldness in one place and keep everything around it quiet. His working material
-earns restraint, not timidity - a page that reads as a template is the failure mode the
-skill exists to prevent.
+*Clean and professional* above is not a licence for timidity. Spend boldness in one
+place and keep everything around it quiet; a page that reads as a template is the failure
+the design skill exists to prevent.
 
 ### Structure instead of explanation
 
@@ -85,7 +95,7 @@ made replaced a sentence with structure.
 
 ### Reading it on a phone
 
-`artifact-design`'s phone-width rule missed both of these. Check at 320px, and rotate it.
+Check at 320px, and rotate it. A general phone-width rule did not catch either of these.
 
 - **A height measured from content goes stale when the width changes.** Size a textarea
   from `scrollHeight` once at load and a rotate, or a column collapsing, silently clips
@@ -94,18 +104,6 @@ made replaced a sentence with structure.
 - **`nowrap` on anything that can hold a long string takes the row off the page.** A grid
   or flex child defaults to `min-width: auto`, so its min-content width forces the track
   wider than the viewport. `min-width: 0` on the child, and let it wrap.
-
-### Local file or published artifact
-
-Default to a local file in the project, even though the Artifact tool leans hard the other
-way. Publishing sends the content to claude.ai, where a link shares it further, and most
-of what he asks for is his own working material.
-
-Publish only when he asks, or when the page is plainly for other people and carries
-nothing private. **Ask first - always - when the page carries third-party personal data:**
-names of minors, parents' phone numbers, anything from a roster or a form. Build it
-locally, say why, and offer the artifact in one line. His standing rule that PII is his to
-share and not yours holds here exactly as it does for a commit.
 
 ### What changes off `file://`
 
