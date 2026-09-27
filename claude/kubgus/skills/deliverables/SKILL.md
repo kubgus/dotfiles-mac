@@ -47,8 +47,8 @@ Three skills split a page between them, with no overlap:
 - **`artifact-design`** owns the page contract - tokens, both themes, libraries, layout,
   the responsive floor, title and favicon. It also calls how much design effort the page
   deserves; let that call set how heavy the `frontend-design` pass is.
-- **This section** owns what neither covers: where the file ends up, what breaks once it
-  is a local file, and the specific ways his pages have actually failed.
+- **This section** owns what neither covers: where the file ends up and what breaks once
+  it is a local file. `references/page-design.md` holds the rest - what he cuts.
 
 ### Local file or published artifact
 
@@ -77,33 +77,8 @@ to HTML because the terminal mangles it is not a design brief.
 place and keep everything around it quiet; a page that reads as a template is the failure
 the design skill exists to prevent.
 
-### Structure instead of explanation
-
-A page explaining itself in grey prose has not been laid out yet. Every correction he has
-made replaced a sentence with structure.
-
-- **Provenance and as-of dates go at the bottom**, never as a subtitle under the h1. The
-  top of the page is for the content.
-- **A sentence carrying figures is a stat tile**, with the qualifier as small text under
-  the number rather than as a clause beside it.
-- **A caption says what a thing is, not what you concluded from it.** Where the encoding
-  is self-evident the legend is optional too; prose explaining a colour code never is.
-- **Repeated rows become cards when each is acted on** - a person to call, a field to
-  fill - and stay a table when they are scanned down a column.
-- **One dominant element per heading line.** Adjacent facts on a line need a visible
-  separator, not a gap, and a label word the value already implies comes out.
-
-### Reading it on a phone
-
-Check at 320px, and rotate it. A general phone-width rule did not catch either of these.
-
-- **A height measured from content goes stale when the width changes.** Size a textarea
-  from `scrollHeight` once at load and a rotate, or a column collapsing, silently clips
-  it. A `ResizeObserver` on the container - not on the element you are resizing - catches
-  every cause at once.
-- **`nowrap` on anything that can hold a long string takes the row off the page.** A grid
-  or flex child defaults to `min-width: auto`, so its min-content width forces the track
-  wider than the viewport. `min-width: 0` on the child, and let it wrap.
+Then **read `references/page-design.md`** - his own corrections from real pages, and the
+things he cuts. It is a check to run as you add each element, not a pass at the end.
 
 ### What changes off `file://`
 
