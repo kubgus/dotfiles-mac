@@ -54,7 +54,11 @@ three places the corner costs something.
   armed field means the block on screen says something storage has not been told. Putting
   the button beside that field makes this the easy accident rather than the rare one. Say
   which it is and let him import first or discard, but never hand him a file quietly
-  missing the lines he is looking at as he clicks.
+  missing the lines he is looking at as he clicks. The check runs first, before any part
+  of the reset, or the reset has already blanked the evidence. And because closing the
+  panel does not disarm Import - only reopening does - the field can be armed while it is
+  out of sight: open the panel and put the cursor in it before refusing. A refusal that
+  points at something he cannot see is not a refusal, it is an error message.
 - **Bake the notes as data, never as rendered markup.** One
   `<script type="application/json">` block holding the same shape `localStorage` holds,
   and the page boots from it. Serializing the live DOM alone loses every `<textarea>` he
