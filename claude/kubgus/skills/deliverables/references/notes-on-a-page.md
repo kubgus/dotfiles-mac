@@ -34,6 +34,40 @@ point is that what he types survives the page being regenerated:
   refresh the text block only while Import is still disarmed; once he has typed in the
   block, it is his until he imports or reopens it.
 
-Say plainly in the handover that the notes live in that one browser and reach nobody until
-he copies them out. He chose that trade knowingly; leaving it unsaid is what makes it a
-trap.
+## Export as page
+
+Copy and Import move text. **Export as page** moves the whole thing: one HTML file with
+the notes already in it, openable by someone who never touches this browser. It goes in
+the page's own header, not in the corner with Copy and Import - those act on the field
+under them, this one acts on the document.
+
+- **Bake the notes as data, never as rendered markup.** One
+  `<script type="application/json">` block holding the same shape `localStorage` holds,
+  and the page boots from it. Serializing the live DOM alone loses every `<textarea>` he
+  typed into, because a typed value never reaches `outerHTML` - it is exactly the content
+  being exported that goes missing. Escape `<` as `\u003c` on the way in, or the first
+  note containing `</script>` closes the block early and takes the page with it.
+- **Exactly one baked block, replaced rather than appended.** The export rebuilds it from
+  current storage, which is what makes an export of an export carry the notes as they are
+  now. Append instead and a few generations down which block wins is a coin flip.
+- **Write the values into the markup as well**, then let an idempotent boot re-render over
+  them from the data. Costs a few bytes and buys a file that still reads correctly when
+  the script does not run at all.
+- **Reset transient state before serializing** - close the panel, drop focus, clear any
+  mid-edit styling. Otherwise the file opens frozen in whatever the moment of export
+  happened to look like.
+- **Baked notes seed storage only when the page has none.** Namespace that storage by the
+  page's own identity rather than its filename, so a renamed or moved export still finds
+  its notes - which also means an export opened in the browser it came from meets the
+  notes already there. When the two differ, do not merge: one line at the top naming the
+  conflict, the file's count against the browser's, and he picks. Silently overwriting
+  work done since the export is the Import failure all over again.
+- **Name it as a deliverable** - `Title Case With Spaces - YYYY-MM-DD.html`. The date
+  earns its place here, because he will export the same page more than once.
+- **The download can fail.** It is inert inside the Artifact sandbox and a blocked blob
+  URL fails quietly. Catch it, say so, and point at the text block, which still works.
+
+Say plainly in the handover that the notes live in that one browser until he exports or
+copies them out, and that an exported file is a snapshot: edit it and edit the original
+and the two diverge with nothing to reconcile them. He chose that trade knowingly;
+leaving it unsaid is what makes it a trap.
