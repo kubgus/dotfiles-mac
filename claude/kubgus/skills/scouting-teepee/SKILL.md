@@ -22,8 +22,10 @@ implying it does, and it is worth writing up afterwards.
 
 ## Access
 
-Requires the Playwright MCP (`mcp__plugin_kubgus_playwright__*`) and a tee-pee session
-already authenticated in that browser.
+Driven through a browser - the `browsing` skill covers the approach to use and the
+mechanics that hold on any site, and this section is only what tee-pee adds on top.
+Tee-pee needs a session already authenticated in that browser, and the approach may not
+keep one across a restart, so expect to be asking for a login more often than once.
 
 **Never handle the password.** If a navigation lands on `/login`, stop and ask Kubo to log
 in to the automation browser himself. The session is his; typing a credential on his
