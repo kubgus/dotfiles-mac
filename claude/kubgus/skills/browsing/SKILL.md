@@ -12,12 +12,15 @@ subtly wrong, so the first question is whether it is needed at all.
 
 In order, stop at the first that works:
 
-1. **An API, a CLI or a feed.** Most sites worth automating have one, and it is faster,
+1. **An MCP server for the service itself.** If one is connected, it is already
+   authenticated, already structured, and its results do not depend on a layout. Check
+   what is connected before assuming there is nothing.
+2. **An API, a CLI or a feed.** Most sites worth automating have one, and it is faster,
    stabler and readable afterwards.
-2. **A plain HTTP fetch.** If the content arrives in the HTML, a request beats a browser.
-3. **Asking him to do it.** One manual click beats twenty minutes of automation that
+3. **A plain HTTP fetch.** If the content arrives in the HTML, a request beats a browser.
+4. **Asking him to do it.** One manual click beats twenty minutes of automation that
    breaks next month. Say so when that is the honest answer.
-4. **A browser**, when the site is a real application, the state lives behind a session,
+5. **A browser**, when the site is a real application, the state lives behind a session,
    or the markup only exists after scripts run.
 
 Say which rung you are on and why the ones above it failed. "There is no API" is a finding

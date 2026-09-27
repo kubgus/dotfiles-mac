@@ -11,6 +11,8 @@ description: How Kubo wants generated files built, named and handed over. Use wh
   `.pdf`, and the choice is his.
 - **Read the format's own skill first** - `docx`, `pdf`, `xlsx`, `pptx`; `dataviz` before
   the first line of any chart, in any medium; for HTML the pair named under *HTML pages*.
+  These names point outside this plugin deliberately. Naming them is worth more than the
+  self-containment, so leave them where they are rather than tidying them into prose.
 - **Name the build approach, never pick it silently.** The axis is a Python library
   (openpyxl, python-docx) against hand-built OOXML plus `zip`. He may not want Python in
   play, and that is a decision rather than an implementation detail.

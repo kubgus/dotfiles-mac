@@ -16,7 +16,7 @@ store `mode=ro`, takes an atomic SQLite backup of it into a private temp directo
 reads the copy and deletes it on the way out. So it never races Reminders.app, never
 trips an Automation prompt, leaves nothing on disk, and cannot write to your task list
 even with a bug in it - the source handle refuses writes at the SQLite level, not by
-convention. Same design as the `calendar` skill, for the same reasons.
+convention.
 
 ```
 scripts/rem.py due [when]           what is due, overdue on top   (default today)
@@ -58,10 +58,9 @@ reminder can never be confused when they sit adjacent.
 2001-01-01, but a timed reminder's `ZDUEDATE` is a real UTC instant carrying a real
 `ZTIMEZONE`, while an all-day reminder's is naive wall clock - the literal number for
 "midnight on the 26th". Convert the second one to local time and you shift it by the
-UTC offset, which lands it on the wrong day and always in the same direction. This is
-the same trap as the Calendar store, minus the `OccurrenceCache` that papers over it
-there. Most dated reminders here are all-day, so this is the failure you would hit
-first.
+UTC offset, which lands it on the wrong day and always in the same direction. Nothing
+papers over it here either - there is no cache of pre-expanded instances to fall back
+on. Most dated reminders are all-day, so this is the failure you would hit first.
 
 **Lists, groups and smart lists share one table.** `ZREMCDBASELIST` holds all three,
 plus deleted ones that are still present. "Tasks" and "Inbox" are groups, not lists;
@@ -116,8 +115,8 @@ back empty because of a hidden list.
 provably gone. Every judgement about what counts as noise lives in `config.toml` beside
 this file.
 
-Unlike the calendar, nothing here is noise by construction - there is no equivalent of a
-nameday feed or a Google room calendar. So as shipped it hides only smart lists, which
+Nothing here is noise by construction - no subscribed feeds, no entries conjured by a
+service he never opted into. So as shipped it hides only smart lists, which
 is a correctness call rather than a taste one. `Long-term` is named as a commented-out
 candidate and nothing else; do not add to that list on his behalf.
 
@@ -136,7 +135,7 @@ are decoded and shown - `arriving at Jakub's Home` - because those sit in plain 
 `EKRecurrenceFrequency` (0 daily, 1 weekly, 2 monthly, 3 yearly); only daily and weekly
 appear in this store, so the monthly and yearly labels are unverified. Reminders
 materialises the next instance when you complete a recurring one, so there is nothing
-to expand and no risk of conjuring occurrences - unlike the calendar.
+to expand and no risk of conjuring occurrences that were never really there.
 
 **Sections are not grouped.** The store has them, but a reminder's membership lives in
 a binary plist on the list rather than as a foreign key, so `open` groups by list only.
@@ -154,12 +153,12 @@ ticked off on his phone an hour ago is still open here.
 
 ## Writing
 
-There is none, by design - same as `calendar`. If he wants a reminder created or
+There is none, by design. If he wants a reminder created or
 completed, say so and let him do it in Reminders.app or Siri. A write path here would
 need Automation access and could race the sync engine; completing a recurring reminder
 in particular is a server-side operation that materialises the next instance, and
 faking it in SQL would corrupt the series.
 
-He has said a write path is more likely here than on the calendar. When that happens it
+He has said this is the store most likely to get a write path one day. When it does it
 goes through AppleScript or the `reminders` CLI as a separate command, never as SQL
 against this store, and the read path stays exactly as it is.
