@@ -1,17 +1,13 @@
 # Page design
 
-Nineteen corrections to one page, which were four or five ideas wearing different
-clothes. `frontend-design` owns the aesthetic; this is what he cuts.
-
 ## The test
 
 For every element on the page, ask what it tells the reader that nothing else already
 tells them. If the answer is nothing, it is decoration and it goes.
 
-**Run this as you add, not as a pass at the end.** Both recurring failures below were
-committed twice in the same session - a legend added, removed, and a second one added -
-because the rule was being treated as a taste to apply afterwards rather than a check at
-the moment of adding.
+**Run it as you add, not as a pass at the end.** Treated as a taste to apply afterwards,
+every rule below gets broken first and found later - and some of them twice, because
+nothing stops the second instance while the first is still on the page.
 
 ## Prose that should have been structure
 
@@ -26,9 +22,9 @@ A page explaining itself in grey text has not been laid out yet.
 - **A legend is earned only when the encoding is arbitrary** - a colour standing for a
   category whose name appears nowhere near it. When the coloured thing sits beside its
   own label, the legend is decoration.
-  - There is a second cost. A legend generalises, and a generalisation can be wrong in a
-    way the individually labelled things were not. One added here invented a category
-    that did not exist.
+  - There is a second cost, and it is correctness rather than taste. A legend
+    generalises, so it can assert something false about a set whose members were each
+    labelled correctly - a category that covers none of them, a name nothing carries.
 
 ## One signal per level
 
@@ -57,8 +53,8 @@ near-neutral slate that never read as a colour at all.
   subtitle become four lines, each with a small icon. Two lines beat a separator, and a
   separator beats a gap.
 - **One dominant element per heading line.**
-- **Drop the label word when the position already says it.** `radca Granadír` is
-  `Granadír`.
+- **Drop the label word when the position already says it.** A field whose place on the
+  card identifies it does not also need naming in its own value.
 - **Icons are welcome.** Inline SVG rather than emoji, so they take the theme colour.
 
 ## Depth from surfaces, not from lines

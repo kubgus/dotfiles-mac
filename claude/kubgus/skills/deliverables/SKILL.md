@@ -48,7 +48,7 @@ Three skills split a page between them, with no overlap:
   the responsive floor, title and favicon. It also calls how much design effort the page
   deserves; let that call set how heavy the `frontend-design` pass is.
 - **This section** owns what neither covers: where the file ends up and what breaks once
-  it is a local file. `references/page-design.md` holds the rest - what he cuts.
+  it is a local file. `references/page-design.md` holds the rest: what to cut.
 
 ### Local file or published artifact
 
@@ -77,8 +77,8 @@ to HTML because the terminal mangles it is not a design brief.
 place and keep everything around it quiet; a page that reads as a template is the failure
 the design skill exists to prevent.
 
-Then **read `references/page-design.md`** - his own corrections from real pages, and the
-things he cuts. It is a check to run as you add each element, not a pass at the end.
+Then **read `references/page-design.md`** before putting anything on the page. It is a
+check to run as each element goes in, not a pass at the end.
 
 ### What changes off `file://`
 
