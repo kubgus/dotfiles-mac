@@ -39,10 +39,22 @@ point is that what he types survives the page being regenerated:
 ## Export as page
 
 Copy and Import move text. **Export as page** moves the whole thing: one HTML file with
-the notes already in it, openable by someone who never touches this browser. It goes in
-the page's own header, not in the corner with Copy and Import - those act on the field
-under them, this one acts on the document.
+the notes already in it, openable by someone who never touches this browser. It sits in
+the same corner, third after Copy and Import. That is his call and it overrides the
+reasoning that would put a document-level action in the page header; what follows is the
+three places the corner costs something.
 
+- **Export is hidden until he opens "Notes as text".** The corner is inside the collapsed
+  panel, so the one control that gets a note to another person is behind a toggle, and
+  nobody finds it by looking. Say so in the handover, every time.
+- **The confirmation has to outlive the panel.** Reset collapses the panel before
+  serializing, so the button closes the surface it is standing on. Put the export status
+  on a line outside the panel, or it vanishes in the same frame it is written.
+- **Refuse to export while Import is armed.** Export ships what storage holds, and an
+  armed field means the block on screen says something storage has not been told. Putting
+  the button beside that field makes this the easy accident rather than the rare one. Say
+  which it is and let him import first or discard, but never hand him a file quietly
+  missing the lines he is looking at as he clicks.
 - **Bake the notes as data, never as rendered markup.** One
   `<script type="application/json">` block holding the same shape `localStorage` holds,
   and the page boots from it. Serializing the live DOM alone loses every `<textarea>` he
