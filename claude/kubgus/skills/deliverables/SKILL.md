@@ -67,6 +67,22 @@ spend boldness in one place and keep everything around it quiet. His working mat
 earns restraint, not timidity - a page that reads as a template is the failure mode the
 skill exists to prevent.
 
+### Structure instead of explanation
+
+A page explaining itself in grey prose has not been laid out yet. Every correction he has
+made replaced a sentence with structure.
+
+- **Provenance and as-of dates go at the bottom**, never as a subtitle under the h1. The
+  top of the page is for the content.
+- **A sentence carrying figures is a stat tile**, with the qualifier as small text under
+  the number rather than as a clause beside it.
+- **A caption says what a thing is, not what you concluded from it.** Where the encoding
+  is self-evident the legend is optional too; prose explaining a colour code never is.
+- **Repeated rows become cards when each is acted on** - a person to call, a field to
+  fill - and stay a table when they are scanned down a column.
+- **One dominant element per heading line.** Adjacent facts on a line need a visible
+  separator, not a gap, and a label word the value already implies comes out.
+
 ### Reading it on a phone
 
 `artifact-design`'s phone-width rule missed both of these. Check at 320px, and rotate it.
