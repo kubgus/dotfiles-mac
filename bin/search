@@ -113,6 +113,10 @@ case "${1:-}" in
         ;;
 esac
 
+# Give the user instant feedback on what is happening, rather than a long pause before the
+# picker appears. The find is still running, but fzf draws as input arrives.
+printf "Searching...\r" >&2
+
 # Empty means no limit: the whole tree below the root is walked. That is a
 # couple of seconds over a home directory, which streaming into fzf hides -
 # the picker is up and filling the whole time. --depth is for when it does not
@@ -188,7 +192,7 @@ selected="$(
         | {
             IFS= read -r first || exit 3
             { printf '%s\n' "$first"; cat; } \
-                | fzf --height=40% --reverse --prompt='search> '
+                | fzf --height=40% --reverse --prompt='Search > '
         }
 )" || status=$?
 
