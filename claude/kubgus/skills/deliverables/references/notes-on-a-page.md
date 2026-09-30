@@ -19,47 +19,43 @@ point is that what he types survives the page being regenerated:
 - **One plain-text block holds all the notes, and it is canonical.** It lives behind a
   single toggle - "Notes as text" - rather than sitting open, because it is the way data
   leaves and enters the page, not the way he reads it day to day.
-- **Copy and Import sit overlaid on that field**, top-right corner, not in a toolbar
-  somewhere else. The buttons act on the text under them and should look like it.
-  - Copy takes **what is in the field**, not a fresh render of the notes. Once the field
-    is editable, copying something he cannot see is a bug.
-  - Import starts **disabled** and arms the moment the field is edited, so it reads as
-    "apply what I just changed" rather than a mystery action. Opening the panel refills
-    the field and disarms it again.
+- **Save, Copy and Export sit overlaid on that field**, top-right corner and in that
+  order, not in a toolbar somewhere else. The buttons act on the text under them and
+  should look like it.
+  - Save is the text block's button and has nothing to do with the note boxes, which
+    autosave and never show one. Two different saves on one page, so let only this one
+    be a button.
+  - Save starts **disabled** and arms the moment the field is edited, so it reads as
+    "apply what I just changed" rather than a mystery action. It disarms again on a
+    successful save, and on reopening the panel, which refills the field.
   - On click it parses the whole text **before touching storage**. If any line fails,
-    refuse the entire import and say which line and why - unparseable, a name or heading
+    refuse the whole save and say which line and why - unparseable, a name or heading
     that is not on the page, the same line twice in one place. Duplication is per scope
     and not global: one item name legitimately appears once at the top level and again
-    under every heading it has a cell in. A partial import leaves him with some notes
+    under every heading it has a cell in. A partial save leaves him with some notes
     overwritten and no way to tell which.
-  - Import replaces everything rather than merging, which is what makes it a real
-    round-trip. Say so next to the button, because pasting a partial block then wipes the
-    rest.
-- **Keep the two views in step, but never fight him for the field.** An in-place edit can
-  refresh the text block only while Import is still disarmed; once he has typed in the
-  block, it is his until he imports or reopens it.
+  - Save replaces everything rather than merging, which is what makes it a real
+    round-trip. Say so next to the button, because pasting a partial block then wipes
+    the rest.
+  - Copy takes **what is in the field**, not a fresh render of the notes. Once the field
+    is editable, copying something he cannot see is a bug.
+- **Keep the two views in step, but never fight him for the field.** An in-place edit
+  can refresh the text block only while Save is still disarmed; once he has typed in the
+  block, it is his until he saves or reopens it.
 
 ## Behaviour, not chrome
 
-Everything in this file is specified as behaviour and position - what each control does,
-where it sits, what it refuses. Every visual property comes from the page it lands on:
-border or no border, which surface, what radius, what weight, and which of these controls
-if any gets the accent. Where a rule below does name one - the well surface under a note
-box, its missing border - it is quoting `page-design.md` rather than specifying chrome of
-its own.
+Everything here is behaviour and position - what each control does, where it sits, what
+it refuses. Border, surface, radius, weight and which control if any takes the accent
+all come from the page it lands on; where a rule below does name one, it is quoting
+`page-design.md` rather than specifying chrome of its own.
 
-**Take the mechanism and leave the stylesheet.** Lifting the save, copy, import and export
-system off a page of his that already has it working is the right move and most of what
-this file is for. Lifting that page's button treatment along with it is not, and the two
-travel together unless they are separated on purpose. Controls carrying another page's
-borders onto a page that gets its depth from surfaces read as pasted in, and the tell is
-that they look perfectly fine in isolation. What a reference page's notes are *about* does
-not carry either - that is its content, not a template.
-
-**The line that reports a baked-notes collision has no box.** Nothing here calls for a
-bordered or rule-marked container around it, and a page that expresses severity some other
-way will look wrong wearing one. `page-design.md` says the same thing from the other side:
-an element drawn only to carry a signal is decoration.
+**Take the mechanism and leave the stylesheet.** Lifting a working Save, Copy and Export
+system off a page of his is the right move and most of what this file is for; lifting
+that page's button treatment with it is not, and the two travel together unless they are
+separated on purpose. The tell is controls that look perfectly fine in isolation. What
+that page's notes were *about* does not carry either - content, not a template - and
+neither does the box someone drew around its collision line.
 
 ## What a note attaches to
 
@@ -77,7 +73,7 @@ already there and already visible, it stops being about the last cell and starts
 about this one. The cell carries the selection ring and a marker saying it holds a note;
 the box carries the label of the pair and the text. Everything else is as it is anywhere
 else: the same debounced autosave, the same saved marker in the field's corner, the same
-text block, the same Copy, Import and Export.
+text block, the same Save, Copy and Export.
 
 **Do not make the text block the way a cell note is written.** It is how data leaves and
 enters the page and not how he works, so a matrix whose notes can only be typed there
@@ -95,15 +91,15 @@ ordinary rule covers them. The docked box is for the cells only.
 
 **Three kinds of note, one flat store.** Per-item, per-group and per-cell notes live in
 the same keyed object rather than three, so there is one namespace to serialize, one to
-import, one to bake. Prefix the per-group keys with the marker the text format itself
+parse back, one to bake. Prefix the per-group keys with the marker the text format itself
 uses for them, `## `, so the kinds cannot collide and a note body can never be read back
 as a key; a cell key is then its group key joined to its item key, already unmistakable
 because the group half carries the prefix. That the group half *is* the heading is worth
-keeping: change the headings and every cell key turns into an unknown heading the import
+keeping: change the headings and every cell key turns into an unknown heading the save
 refuses by name, rather than a key that quietly resolves onto the wrong cell. A prefix
 invented for the store alone would be a second format to keep in step with the first.
 
-**The line format is canonical, because Import parses it.**
+**The line format is canonical, because Save parses it.**
 
 - `- Item: note` at the top level for a per-item note.
 - `> note` under a `## Heading` for that group's own note. The `> ` marker is there so a
@@ -152,11 +148,11 @@ silence means saved.
 
 ## Export as page
 
-Copy and Import move text. **Export as page** moves the whole thing: one HTML file with
-the notes already in it, openable by someone who never touches this browser. It sits in
-the same corner, third after Copy and Import. That is his call and it overrides the
-reasoning that would put a document-level action in the page header; what follows is the
-three places the corner costs something.
+Copy takes text out and Save brings it back. **Export** moves the whole thing: one HTML
+file with the notes already in it, openable by someone who never touches this browser.
+It sits in the same corner, third after Save and Copy. That is his call and it overrides
+the reasoning that would put a document-level action in the page header; what follows is
+the three places the corner costs something.
 
 - **Export is hidden until he opens "Notes as text".** The corner is inside the collapsed
   panel, so the one control that gets a note to another person is behind a toggle, and
@@ -164,13 +160,14 @@ three places the corner costs something.
 - **The confirmation has to outlive the panel.** Reset collapses the panel before
   serializing, so the button closes the surface it is standing on. Put the export status
   on a line outside the panel, or it vanishes in the same frame it is written.
-- **Refuse to export while Import is armed.** Export ships what storage holds, and an
+- **Refuse to export while Save is armed.** Export ships what storage holds, and an
   armed field means the block on screen says something storage has not been told. Putting
   the button beside that field makes this the easy accident rather than the rare one. Say
-  which it is and let him import first or discard, but never hand him a file quietly
+  which it is and let him save first or discard, but never hand him a file quietly
   missing the lines he is looking at as he clicks. The check runs first, before any part
   of the reset, or the reset has already blanked the evidence. And because closing the
-  panel does not disarm Import - only reopening does - the field can be armed while it is
+  panel does not disarm Save - only reopening or a successful save does - so the field can
+  be armed while it is
   out of sight: open the panel and put the cursor in it before refusing. A refusal that
   points at something he cannot see is not a refusal, it is an error message.
 - **Bake the notes as data, never as rendered markup.** One
@@ -207,7 +204,7 @@ three places the corner costs something.
   collision costs a glance and never a dismissal: the browser's notes stay live and
   untouched, one quiet line at the top says what the file carries and offers to take it
   instead, and ignoring that line is a correct way to use the page. Never merge silently -
-  that is the Import failure again - but never make him clear something away to read his
+  that is the Save failure again - but never make him clear something away to read his
   own page.
 - **Name it as a deliverable** - `Title Case With Spaces - YYYY-MM-DD.html`. The date
   earns its place here, because he will export the same page more than once.
