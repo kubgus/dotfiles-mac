@@ -3,10 +3,10 @@
 Only add notes when he asks for them. When he does, this is the shape, because the whole
 point is that what he types survives the page being regenerated:
 
-- **Store them in `localStorage`, keyed by the thing's own identity** - a person's name, a
-  row's label, a pair of labels where two of them meet - never by position or index. He will ask for the page to be rebuilt with
-  new data, and notes keyed by identity reattach themselves while notes keyed by row
-  number silently land on the wrong item.
+- **Store them in `localStorage`, keyed by the thing's own identity** - a person's name,
+  a row's label, a pair of labels where two of them meet - never by position or index.
+  He will ask for the page to be rebuilt with new data, and notes keyed by identity
+  reattach themselves while notes keyed by row number silently land on the wrong item.
 - **Wrap every read and write in try/catch** and render correctly with storage blocked.
   A private window or cleared site data must degrade to a page that still works, not a
   blank one. Say so on the page when it happens. A browser that refuses `localStorage` on
@@ -112,9 +112,8 @@ kind of note has no headings at all.
 it holds. Never a popover, a modal, a dialog or anything that opens on click - a note
 you have to open is a note nobody reads, and the page stops being something he scans. A
 marker icon is a different feature, not a lighter version of this one: it says a note
-exists without saying what it says. Where a box's subject is chosen, markers are how he
-sees which things have notes, and they are an index into the box rather than a
-substitute for it. Nowhere are they the thing he reads a note in.
+exists without saying what it says. It may index a box whose subject is chosen. It never
+stands in for one, and nowhere is it the thing he reads a note in.
 
 **One auto-growing field.** `rows=1`, `resize: none`, `overflow: hidden`, height set
 from `scrollHeight` on input. It sits on the input well surface with no border and a
@@ -174,7 +173,7 @@ the three places the corner costs something.
 - **Exactly one baked block, replaced rather than appended.** The export rebuilds it from
   current storage, which is what makes an export of an export carry the notes as they are
   now. Append instead and a few generations down which block wins is a coin flip.
-- - **Write what each note renders as into the markup too**, then boot idempotently over
+- **Write what each note renders as into the markup too**, then boot idempotently over
   it. Idempotent structurally and not only by value: an exported file already carries
   the boxes in its markup, so a boot that creates one per row appends a second. Reuse
   what is there, create only where nothing is. A box with a chosen subject holds one
