@@ -4,7 +4,8 @@ Only add notes when he asks for them. When he does, this is the shape, because t
 point is that what he types survives the page being regenerated:
 
 - **Store them in `localStorage`, keyed by the thing's own identity** - a person's name, a
-  row's label - never by position or index. He will ask for the page to be rebuilt with
+  row's label, a pair of labels for the cell where two of them meet - never by position or
+  index. He will ask for the page to be rebuilt with
   new data, and notes keyed by identity reattach themselves while notes keyed by row
   number silently land on the wrong item.
 - **Wrap every read and write in try/catch** and render correctly with storage blocked.
@@ -12,11 +13,9 @@ point is that what he types survives the page being regenerated:
   blank one. Say so on the page when it happens. A browser that refuses `localStorage` on
   `file://` swallows every note silently otherwise, and Export is then the only way
   anything at all survives the tab closing.
-- **Let him type a note next to the thing it is about**, in a box that is always on the
-  row and always showing what it holds - never a form at the bottom, never something he
-  opens. Drop the key entirely when the note is emptied, so a round-trip out and back
-  changes nothing. "The box" below has the form, and it is not negotiable down to a
-  popover.
+- **Let him type a note next to the thing it is about**, never in a form at the bottom.
+  Drop the key entirely when the note is emptied, so a round-trip out and back changes
+  nothing. "What a note attaches to" decides what gets a box, and "The box" has its form.
 - **One plain-text block holds all the notes, and it is canonical.** It lives behind a
   single toggle - "Notes as text" - rather than sitting open, because it is the way data
   leaves and enters the page, not the way he reads it day to day.
@@ -28,8 +27,10 @@ point is that what he types survives the page being regenerated:
     "apply what I just changed" rather than a mystery action. Opening the panel refills
     the field and disarms it again.
   - On click it parses the whole text **before touching storage**. If any line fails,
-    refuse the entire import and say which line and why - unparseable, a name that is not
-    on the page, the same name twice. A partial import leaves him with some notes
+    refuse the entire import and say which line and why - unparseable, a name or heading
+    that is not on the page, the same line twice in one place. Duplication is per scope
+    and not global: one item name legitimately appears once at the top level and again
+    under every heading it has a cell in. A partial import leaves him with some notes
     overwritten and no way to tell which.
   - Import replaces everything rather than merging, which is what makes it a real
     round-trip. Say so next to the button, because pasting a partial block then wipes the
@@ -43,7 +44,9 @@ point is that what he types survives the page being regenerated:
 Everything in this file is specified as behaviour and position - what each control does,
 where it sits, what it refuses. Every visual property comes from the page it lands on:
 border or no border, which surface, what radius, what weight, and which of these controls
-if any gets the accent.
+if any gets the accent. Where a rule below does name one - the well surface under a note
+box, its missing border - it is quoting `page-design.md` rather than specifying chrome of
+its own.
 
 **Take the mechanism and leave the stylesheet.** Lifting the save, copy, import and export
 system off a page of his that already has it working is the right move and most of what
@@ -77,11 +80,13 @@ text block was already the way data enters the page.
 
 **Three kinds of note, one flat store.** Per-item, per-group and per-cell notes live in
 the same keyed object rather than three, so there is one namespace to serialize, one to
-import, one to bake. Prefix the per-group keys with the marker the text format itself uses
-for them, `## `, so the kinds cannot collide and a note body can never be read back as a
-key; a cell key is then its group key joined to its item key, already unmistakable because
-the group half carries the prefix. A prefix invented for the store alone would be a second
-format to keep in step with the first.
+import, one to bake. Prefix the per-group keys with the marker the text format itself
+uses for them, `## `, so the kinds cannot collide and a note body can never be read back
+as a key; a cell key is then its group key joined to its item key, already unmistakable
+because the group half carries the prefix. That the group half *is* the heading is worth
+keeping: change the headings and every cell key turns into an unknown heading the import
+refuses by name, rather than a key that quietly resolves onto the wrong cell. A prefix
+invented for the store alone would be a second format to keep in step with the first.
 
 **The line format is canonical, because Import parses it.**
 
@@ -119,8 +124,8 @@ textarea. `page-design.md` states the trap in general; this is where it bites, b
 it.
 
 **Autosave, debounced at around 400ms, and no Save button on the row.** A button per row
-is a hundred buttons, and one note lost every time he clicks away from a row without
-finding it.
+is a hundred buttons, and the note he loses is the one on the row where he never noticed
+there was a button to press.
 
 **The confirmation lives in the field's own corner** - a small saved marker that fades
 after about a second. Anywhere else and he has to look up from what he just typed to
@@ -163,11 +168,11 @@ three places the corner costs something.
 - **Exactly one baked block, replaced rather than appended.** The export rebuilds it from
   current storage, which is what makes an export of an export carry the notes as they are
   now. Append instead and a few generations down which block wins is a coin flip.
-- **Write the per-row values into the markup as well**, then boot idempotently over them.
-  Idempotent structurally and not only by value: an exported file already carries the note
-  boxes in its markup, so a boot that creates one per row appends a second. Reuse the box
-  that is there, create only where none is. The few bytes buy a file that still reads
-  correctly when the script does not run at all.
+- **Write what each note renders as into the markup too**, then boot idempotently over it
+  - a box's value, and a cell's marker and tooltip text. Idempotent structurally and not
+  only by value: an exported file already carries those in its markup, so a boot that
+  creates one per row appends a second. Reuse what is there, create only where nothing is.
+  The few bytes buy a file that still reads correctly when the script does not run at all.
 - **Reset transient state before serializing** - close the panel, drop focus, clear any
   mid-edit styling, or the file opens frozen in whatever the moment of export happened to
   look like. The text block is derived, so clear it outright - `textContent`, not just
