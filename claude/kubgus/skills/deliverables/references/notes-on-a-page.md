@@ -40,30 +40,37 @@ point is that what he types survives the page being regenerated:
 
 ## What a note attaches to
 
-**A note attaches to something that has a row.** That is the test, and it runs before any
-of the rest of this: a list of people, a table of items, a checklist - each line is a row,
-each row gets a box. A dense grid, a matrix or a heat map has no row to put a box on, a
-cell being a few characters wide and a note being a sentence. That is not a styling
-problem to be solved with a smaller box. It is the page saying the notes belong somewhere
-else.
+**A box attaches to something that has a row.** That is the test: a list of people, a
+table of items, a checklist - each line is a row, each row gets a box. A dense grid, a
+matrix or a heat map has no row to put a box on, a cell being a few characters wide and a
+note being a sentence. That is a limit on the box and not on the note. **A cell has no
+room for a box. It has plenty of room for a note.** Those are two claims and they are
+easy to collapse into one, which is how a page ends up refusing to hold something he
+wants to write down.
 
-**On a matrix, attach the notes to its axes** - one box per row entity, one per column
-entity, rendered as their own lists beside or below the grid rather than inside it. What
-he wants to say about a cell is nearly always about one of the two things that meet
-there, and a box per axis entity is a surface he can read down.
+**A matrix carries three kinds of note.** Its two axes have rows, so they get boxes - one
+per row entity, one per column entity, as their own lists beside or below the grid rather
+than inside it. Its cells have no rows, so a cell note is typed into the canonical text
+block and surfaces on the grid as a marker plus the cell's existing hover tooltip. That
+is not the box rule watered down. It is the one place the box rule cannot reach, and the
+text block was already the way data enters the page.
 
-**Two kinds of note, one flat store.** Per-item and per-group notes live in the same keyed
-object rather than two, so there is one namespace to serialize, one to import, one to
-bake. Prefix the per-group keys with the marker the text format itself uses for them,
-`## `, so the two kinds cannot collide and a note body can never be read back as a key. A
-prefix invented for the store alone would be a second format to keep in step with the
-first.
+**Three kinds of note, one flat store.** Per-item, per-group and per-cell notes live in
+the same keyed object rather than three, so there is one namespace to serialize, one to
+import, one to bake. Prefix the per-group keys with the marker the text format itself uses
+for them, `## `, so the kinds cannot collide and a note body can never be read back as a
+key; a cell key is then its group key joined to its item key, already unmistakable because
+the group half carries the prefix. A prefix invented for the store alone would be a second
+format to keep in step with the first.
 
 **The line format is canonical, because Import parses it.**
 
-- `- Item: note` for a per-item note.
-- `> note` for a per-group note, under the `## Heading` it belongs to. The `> ` marker is
-  there so a note that itself opens with a dash cannot read back as an item line.
+- `- Item: note` at the top level for a per-item note.
+- `> note` under a `## Heading` for that group's own note. The `> ` marker is there so a
+  note that itself opens with a dash cannot read back as an item line.
+- `- Item: note` under a `## Heading` for the cell where that heading's axis meets that
+  item. A line's kind is set by what it sits under, so one heading kind and two line kinds
+  carry all three sorts of note and a matrix needs no syntax a flat list does not have.
 - Newlines flatten to ` / ` on the way out. One note is one line, always, or the parser is
   left guessing where a note ends.
 
@@ -73,7 +80,8 @@ first.
 it holds. Never a popover, a modal, a dialog or anything that opens on click - a note you
 have to open is a note nobody reads, and the page stops being something he scans. A marker
 icon with a hover tooltip is a different feature, not a lighter version of this one: it
-says a note exists without saying what it says, which is the half he does not need.
+says a note exists without saying what it says. On a cell that is the whole of what a
+marker can do and it is enough. On a row it is a substitution, and the answer is the box.
 
 **One auto-growing field.** `rows=1`, `resize: none`, `overflow: hidden`, height set from
 `scrollHeight` on input. It sits on the input well surface with no border and a
