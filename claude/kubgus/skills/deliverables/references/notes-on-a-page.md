@@ -105,6 +105,36 @@ headings the save refuses by name, rather than keys that quietly resolve onto th
 thing. A prefix invented for the store alone would be a second format to keep in step
 with the first.
 
+## Never lose a note
+
+The notes are the only thing on the page he cannot regenerate. Every other part of it is
+one rebuild away, so the rules below buy nothing anywhere else and are not negotiable
+here.
+
+**Freeze the key shape and the namespace id the moment a page holds notes.** Changing
+either does not fail - it orphans. The notes sit in storage under keys nothing looks
+for, the page renders empty, and because Save replaces the whole namespace rather than
+merging it, the next save deletes them. A key change is a delete with extra steps and
+nothing in the browser says so. The keys are derived from the text format, so a change
+to that format is a key change too; the two are frozen together. An export baking its
+own id is not a change - it is a new page, doing it once.
+
+**If a shape has to change, migrate and keep the old blob.** Read the old keys, write
+the new ones, leave the old ones exactly where they are. An in-place rewrite that goes
+wrong has nothing behind it. A version that cannot migrate does not ship.
+
+**Any write leaving the store with fewer notes than it held copies the previous value
+first** - one sibling key, overwritten each time, in the same plain JSON the store uses,
+so recovering is one line in the console. One step and not a history, which is enough
+for the way this actually goes wrong: a Save against a stale or partial text block takes
+everything at once and he finds out in the same minute. A slow drift it will not catch,
+and it is not meant to.
+
+**A page that finds nothing says so.** An empty namespace sitting beside a snapshot key,
+or beside a blob in a shape the page no longer reads, is not an empty page - it is a
+page that has lost something. Say which it is and say where the old value is, before he
+types over the evidence.
+
 ## The text format
 
 **Canonical, because Save parses it.**
