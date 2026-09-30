@@ -12,9 +12,11 @@ point is that what he types survives the page being regenerated:
   blank one. Say so on the page when it happens. A browser that refuses `localStorage` on
   `file://` swallows every note silently otherwise, and Export is then the only way
   anything at all survives the tab closing.
-- **Let him type a note next to the thing it is about.** A box on the row beats scrolling
-  to a form at the bottom. Autosave it, confirm quietly, and drop the key entirely when
-  the note is emptied so a round-trip out and back changes nothing.
+- **Let him type a note next to the thing it is about**, in a box that is always on the
+  row and always showing what it holds - never a form at the bottom, never something he
+  opens. Drop the key entirely when the note is emptied, so a round-trip out and back
+  changes nothing. "The box" below has the form, and it is not negotiable down to a
+  popover.
 - **One plain-text block holds all the notes, and it is canonical.** It lives behind a
   single toggle - "Notes as text" - rather than sitting open, because it is the way data
   leaves and enters the page, not the way he reads it day to day.
@@ -35,6 +37,63 @@ point is that what he types survives the page being regenerated:
 - **Keep the two views in step, but never fight him for the field.** An in-place edit can
   refresh the text block only while Import is still disarmed; once he has typed in the
   block, it is his until he imports or reopens it.
+
+## What a note attaches to
+
+**A note attaches to something that has a row.** That is the test, and it runs before any
+of the rest of this: a list of people, a table of items, a checklist - each line is a row,
+each row gets a box. A dense grid, a matrix or a heat map has no row to put a box on, a
+cell being a few characters wide and a note being a sentence. That is not a styling
+problem to be solved with a smaller box. It is the page saying the notes belong somewhere
+else.
+
+**On a matrix, attach the notes to its axes** - one box per row entity, one per column
+entity, rendered as their own lists beside or below the grid rather than inside it. What
+he wants to say about a cell is nearly always about one of the two things that meet
+there, and a box per axis entity is a surface he can read down.
+
+**Two kinds of note, one flat store.** Per-item and per-group notes live in the same keyed
+object rather than two, so there is one namespace to serialize, one to import, one to
+bake. Prefix the per-group keys with the marker the text format itself uses for them,
+`## `, so the two kinds cannot collide and a note body can never be read back as a key. A
+prefix invented for the store alone would be a second format to keep in step with the
+first.
+
+**The line format is canonical, because Import parses it.**
+
+- `- Item: note` for a per-item note.
+- `> note` for a per-group note, under the `## Heading` it belongs to. The `> ` marker is
+  there so a note that itself opens with a dash cannot read back as an item line.
+- Newlines flatten to ` / ` on the way out. One note is one line, always, or the parser is
+  left guessing where a note ends.
+
+## The box
+
+**Permanently visible, sitting on the row.** A textarea, always there, always showing what
+it holds. Never a popover, a modal, a dialog or anything that opens on click - a note you
+have to open is a note nobody reads, and the page stops being something he scans. A marker
+icon with a hover tooltip is a different feature, not a lighter version of this one: it
+says a note exists without saying what it says, which is the half he does not need.
+
+**One auto-growing field.** `rows=1`, `resize: none`, `overflow: hidden`, height set from
+`scrollHeight` on input. It sits on the input well surface with no border and a
+placeholder - `page-design.md` owns the rest of that.
+
+**Re-measure that height on everything that can change the width.** `fonts.ready`,
+`resize`, `orientationchange`, and a `ResizeObserver` on the container rather than on the
+textarea. `page-design.md` states the trap in general; this is where it bites, because
+`overflow: hidden` turns a stale height into a clipped note and nothing on screen admits
+it.
+
+**Autosave, debounced at around 400ms, and no Save button on the row.** A button per row
+is a hundred buttons, and one note lost every time he clicks away from a row without
+finding it.
+
+**The confirmation lives in the field's own corner** - a small "uložené" that fades after
+about a second. Anywhere else and he has to look up from what he just typed to learn it
+was kept. **That same flag is the failure channel**: when storage refuses the write it
+stays up and carries the reason instead of fading. One place to look, and silence means
+saved.
 
 ## Export as page
 
