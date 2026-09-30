@@ -13,6 +13,11 @@ nothing stops the second instance while the first is still on the page.
 
 A page explaining itself in grey text has not been laid out yet.
 
+- **A line introducing something visible is not content.** A sentence saying what the
+  block under it obviously is - the table below lists each person and their status - is
+  written for a reader who cannot see the table. Cut it. If the block genuinely needs
+  the sentence, the block is what needs fixing, and no amount of grey text above it will
+  do that.
 - **A caption identifies the thing. It does not interpret it.** Say what the chart is
   about, never what you concluded from it.
 - **A sentence carrying figures is a stat tile.** The numbers are the payload and the
