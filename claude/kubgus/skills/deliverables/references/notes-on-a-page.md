@@ -38,6 +38,26 @@ point is that what he types survives the page being regenerated:
   refresh the text block only while Import is still disarmed; once he has typed in the
   block, it is his until he imports or reopens it.
 
+## Behaviour, not chrome
+
+Everything in this file is specified as behaviour and position - what each control does,
+where it sits, what it refuses. Every visual property comes from the page it lands on:
+border or no border, which surface, what radius, what weight, and which of these controls
+if any gets the accent.
+
+**Take the mechanism and leave the stylesheet.** Lifting the save, copy, import and export
+system off a page of his that already has it working is the right move and most of what
+this file is for. Lifting that page's button treatment along with it is not, and the two
+travel together unless they are separated on purpose. Controls carrying another page's
+borders onto a page that gets its depth from surfaces read as pasted in, and the tell is
+that they look perfectly fine in isolation. What a reference page's notes are *about* does
+not carry either - that is its content, not a template.
+
+**The line that reports a baked-notes collision has no box.** Nothing here calls for a
+bordered or rule-marked container around it, and a page that expresses severity some other
+way will look wrong wearing one. `page-design.md` says the same thing from the other side:
+an element drawn only to carry a signal is decoration.
+
 ## What a note attaches to
 
 **A box attaches to something that has a row.** That is the test: a list of people, a
@@ -73,6 +93,11 @@ format to keep in step with the first.
   carry all three sorts of note and a matrix needs no syntax a flat list does not have.
 - Newlines flatten to ` / ` on the way out. One note is one line, always, or the parser is
   left guessing where a note ends.
+
+**Never invent a heading for the ungrouped kind.** A decorative heading over a flat list
+of people turns every person note into a cell note, because a line's kind falls out of
+what it sits under and no parser can tell a real group from a label. A page with one
+kind of note has no headings at all.
 
 ## The box
 
