@@ -91,9 +91,9 @@ finding it.
 
 **The confirmation lives in the field's own corner** - a small saved marker that fades
 after about a second. Anywhere else and he has to look up from what he just typed to
-learn it was kept. **That same flag is the failure channel**: when storage refuses the write it
-stays up and carries the reason instead of fading. One place to look, and silence means
-saved.
+learn it was kept. **That same flag is the failure channel**: when storage refuses the
+write it stays up and carries the reason instead of fading. One place to look, and
+silence means saved.
 
 ## Export as page
 
