@@ -52,7 +52,8 @@ near-neutral slate that never read as a colour at all.
 - **One topic per line.** A name, a time and two meta facts crammed into a heading and a
   subtitle become four lines, each with a small icon. Two lines beat a separator, and a
   separator beats a gap.
-- **One dominant element per heading line.**
+- **One dominant element per heading line.** Two things competing for the same line
+  leaves the eye no entry point, and the line stops working as the thing you scan down.
 - **Drop the label word when the position already says it.** A field whose place on the
   card identifies it does not also need naming in its own value.
 - **Icons are welcome.** Inline SVG rather than emoji, so they take the theme colour.
@@ -88,15 +89,18 @@ set, as a caption under the pair. Then both are equal because they are equal.
 Every section gets a heading or none does. A single headed section among unheaded ones
 reads as a stray label rather than as structure.
 
-## Two mechanical traps
+## Mechanical traps
 
 - **`overflow-x: auto` forces the other axis from `visible` to `auto`.** A horizontally
   scrollable element gets a vertical scrollbar it never needed. Pin the axis you do not
   intend to scroll with `overflow-y: hidden`.
 - **A height measured from content is only valid at the width it was measured at.** Size
   a textarea from `scrollHeight` once at load and a rotate, or a column collapsing,
-  silently clips it. A `ResizeObserver` on the container - not on the element you are
-  resizing - catches every cause at once.
+  silently clips it. A `ResizeObserver` on the container catches every width change at
+  once - on the container and not on the element whose height you are the one setting,
+  which observes its own output. It does not catch a font swap: the metrics change
+  inside a box whose own size does not, so no callback fires. Re-measure on
+  `document.fonts.ready` too.
 - **`nowrap` on anything that can hold a long string takes the row off the page.** A grid
   or flex child defaults to `min-width: auto`, so its min-content width forces the track
   wider than the viewport. `min-width: 0` on the child, and let it wrap.
