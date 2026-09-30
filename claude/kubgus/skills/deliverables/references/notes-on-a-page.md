@@ -184,17 +184,18 @@ touches this browser. What it takes to make that file survive being opened:
   to look like. The text block is derived, so clear it outright - `textContent`, not
   just `value` - and let boot rebuild it. Bake the render as it stood and the field
   ships disagreeing with the data behind it.
-- **Baked notes seed storage only when the page has none.** Namespace the store by the
-  page's own identity rather than its filename, so a renamed or moved export still finds
-  its notes - which means an export shares that namespace with the page it came from.
-  Chrome pools every `file://` document into one origin whatever directory it sits in,
-  tested and not assumed, so an export meeting its original's notes is the ordinary case
-  on his machine and not a rare one. Safari is unverified and may refuse `file://`
-  storage outright, which the try/catch rule already absorbs. The collision costs a
-  glance and never a dismissal: the browser's notes stay live and untouched, one quiet
-  line says what the file carries and offers to take it instead, and ignoring that line
-  is a correct way to use the page. Never merge silently - that is the Save failure
-  again - and never make him clear something away to read his own page.
+- **Namespace the store by an id baked into the page**, never by its filename, so a
+  renamed or moved file still finds its notes. **An export bakes a fresh one.** It is a
+  snapshot, so it opens showing what it carries and nothing else - no collision to
+  explain, and no glance owed every time he opens one beside the page it came from.
+  Share the id instead and an export inherits the original's live notes, which on his
+  machine is the ordinary case rather than a rare one: Chrome pools every `file://`
+  document into one origin whatever directory it sits in, tested and not assumed.
+- **Baked notes seed storage only when that id has none.** Reopening an export must show
+  what he typed into it last time, not reset it to what it shipped with. Safari is
+  unverified and may refuse `file://` storage outright, which the try/catch rule already
+  absorbs - a page that cannot store anything still has to render its baked notes and
+  say why they will not persist.
 
 Say plainly in the handover that the notes live in that one browser until he exports or
 copies them out, and that an exported file is a snapshot: edit it and edit the original
