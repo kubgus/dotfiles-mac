@@ -63,20 +63,35 @@ an element drawn only to carry a signal is decoration.
 
 ## What a note attaches to
 
-**A box attaches to something that has a row.** That is the test: a list of people, a
-table of items, a checklist - each line is a row, each row gets a box. A dense grid, a
-matrix or a heat map has no row to put a box on, a cell being a few characters wide and a
-note being a sentence. That is a limit on the box and not on the note. **A cell has no
-room for a box. It has plenty of room for a note.** Those are two claims and they are
-easy to collapse into one, which is how a page ends up refusing to hold something he
-wants to write down.
+**One box per editable thing.** What varies is whether the box's subject is fixed or
+chosen, never whether there is one. A list of people, a table of items, a checklist -
+each line is a row, each row carries its own box. A dense grid, a matrix or a heat map
+has no room in a cell for a box, a cell being a few characters wide and a note being a
+sentence. **That is a limit on where the box sits, not on whether the cell can be
+annotated.** Those are two claims, they are easy to collapse into one, and collapsing
+them is how a page ends up refusing to hold something he wants to write down.
 
-**A matrix carries three kinds of note.** Its two axes have rows, so they get boxes - one
-per row entity, one per column entity, as their own lists beside or below the grid rather
-than inside it. Its cells have no rows, so a cell note is typed into the canonical text
-block and surfaces on the grid as a marker plus the cell's existing hover tooltip. That
-is not the box rule watered down. It is the one place the box rule cannot reach, and the
-text block was already the way data enters the page.
+**A matrix gets one box, docked under the grid, that the selected cell points at.**
+Clicking a cell selects it and the box changes subject. It does not open - it was
+already there and already visible, it stops being about the last cell and starts being
+about this one. The cell carries the selection ring and a marker saying it holds a note;
+the box carries the label of the pair and the text. Everything else is as it is anywhere
+else: the same debounced autosave, the same saved marker in the field's corner, the same
+text block, the same Copy, Import and Export.
+
+**Do not make the text block the way a cell note is written.** It is how data leaves and
+enters the page and not how he works, so a matrix whose notes can only be typed there
+has put them behind a toggle nobody opens - the popover failure reached from the other
+side. He has asked for per-cell notes more than once; a page that stores them and gives
+him nowhere to type them has not answered.
+
+**The docked box needs a resting state.** Nothing selected means disabled, with its
+label saying to pick a cell. Otherwise it reads as a field belonging to nothing, which
+is worse than a field that is missing.
+
+**Axis entities keep their own boxes** wherever the axes are rendered as rows of their
+own - a list of the people, a list of the tasks - because those have rows and the
+ordinary rule covers them. The docked box is for the cells only.
 
 **Three kinds of note, one flat store.** Per-item, per-group and per-cell notes live in
 the same keyed object rather than three, so there is one namespace to serialize, one to
@@ -106,16 +121,18 @@ kind of note has no headings at all.
 
 ## The box
 
-**Permanently visible, sitting on the row.** A textarea, always there, always showing what
-it holds. Never a popover, a modal, a dialog or anything that opens on click - a note you
-have to open is a note nobody reads, and the page stops being something he scans. A marker
-icon with a hover tooltip is a different feature, not a lighter version of this one: it
-says a note exists without saying what it says. On a cell that is the whole of what a
-marker can do and it is enough. On a row it is a substitution, and the answer is the box.
+**Permanently visible, on the row or docked under the grid.** A textarea, always there,
+always showing what it holds. Never a popover, a modal, a dialog or anything that opens
+on click - a note you have to open is a note nobody reads, and the page stops being
+something he scans. A marker icon is a different feature, not a lighter version of this
+one: it says a note exists without saying what it says. On a cell it is an index into
+the docked box and nothing more. Nowhere is it the thing he reads the note in.
 
-**One auto-growing field.** `rows=1`, `resize: none`, `overflow: hidden`, height set from
-`scrollHeight` on input. It sits on the input well surface with no border and a
-placeholder - `page-design.md` owns the rest of that.
+**One auto-growing field.** `rows=1`, `resize: none`, `overflow: hidden`, height set
+from `scrollHeight` on input. It sits on the input well surface with no border and a
+placeholder - `page-design.md` owns the rest of that. A docked box is also one field to
+keep measured rather than one per cell, which is the second reason that shape wins on a
+grid.
 
 **Re-measure that height on everything that can change the width.** `fonts.ready`,
 `resize`, `orientationchange`, and a `ResizeObserver` on the container rather than on the
@@ -168,11 +185,13 @@ three places the corner costs something.
 - **Exactly one baked block, replaced rather than appended.** The export rebuilds it from
   current storage, which is what makes an export of an export carry the notes as they are
   now. Append instead and a few generations down which block wins is a coin flip.
-- **Write what each note renders as into the markup too**, then boot idempotently over it
-  - a box's value, and a cell's marker and tooltip text. Idempotent structurally and not
-  only by value: an exported file already carries those in its markup, so a boot that
-  creates one per row appends a second. Reuse what is there, create only where nothing is.
-  The few bytes buy a file that still reads correctly when the script does not run at all.
+- **Write what each note renders as into the markup too**, then boot idempotently over
+  it. Idempotent structurally and not only by value: an exported file already carries
+  the boxes in its markup, so a boot that creates one per row appends a second. Reuse
+  what is there, create only where nothing is. A docked box holds one cell's note at a
+  time and bakes almost nothing, so the cell notes need a rendered list of their own on
+  the page to reach a reader whose script never runs. Put it under the box, where it
+  doubles as a readable index of every cell that has a note and stops being dead weight.
 - **Reset transient state before serializing** - close the panel, drop focus, clear any
   mid-edit styling, or the file opens frozen in whatever the moment of export happened to
   look like. The text block is derived, so clear it outright - `textContent`, not just
