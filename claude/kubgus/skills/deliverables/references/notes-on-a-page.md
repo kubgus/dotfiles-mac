@@ -38,6 +38,23 @@ point is that what he types survives the page being regenerated:
     the rest.
   - Copy takes **what is in the field**, not a fresh render of the notes. Once the field
     is editable, copying something he cannot see is a bug.
+  - Export downloads the whole page with the notes baked in. It is hidden until he opens
+    the panel, so the one control that gets a note to another person sits behind a
+    toggle nobody finds by looking - say so in the handover, every time.
+  - Its confirmation goes on a line outside the panel. Export collapses the panel before
+    serializing, so the button closes the surface it is standing on and a status written
+    inside vanishes in the same frame.
+  - It refuses while Save is armed. Export ships what storage holds, and an armed field
+    means the block on screen says something storage has not been told; sitting beside
+    that field makes this the easy accident rather than the rare one. Check before any
+    part of the reset, or the reset has already blanked the evidence. Closing the panel
+    does not disarm Save - only reopening or a successful save does - so the field can
+    be armed out of sight: open the panel and put the cursor in it before refusing. A
+    refusal that points at something he cannot see is an error message, not a refusal.
+  - The file is named as a deliverable, `Title Case With Spaces - YYYY-MM-DD.html`, the
+    date earning its place because he will export the same page more than once. The
+    download can also fail quietly - inert in the Artifact sandbox, or a blocked blob
+    URL - so catch it, say so, and point at the text block, which still works.
 - **Keep the two views in step, but never fight him for the field.** An in-place edit
   can refresh the text block only while Save is still disarmed; once he has typed in the
   block, it is his until he saves or reopens it.
@@ -137,42 +154,24 @@ learn it was kept. **That same flag is the failure channel**: when storage refus
 write it stays up and carries the reason instead of fading. One place to look, and
 silence means saved.
 
-## Export as page
+## Baking an export
 
-Copy takes text out and Save brings it back. **Export** moves the whole thing: one HTML
-file with the notes already in it, openable by someone who never touches this browser.
-It sits in the same corner, third after Save and Copy. That is his call and it overrides
-the reasoning that would put a document-level action in the page header; what follows is
-the three places the corner costs something.
+An export is one HTML file with the notes already in it, openable by someone who never
+touches this browser. What it takes to make that file survive being opened:
 
-- **Export is hidden until he opens "Notes as text".** The corner is inside the collapsed
-  panel, so the one control that gets a note to another person is behind a toggle, and
-  nobody finds it by looking. Say so in the handover, every time.
-- **The confirmation has to outlive the panel.** Reset collapses the panel before
-  serializing, so the button closes the surface it is standing on. Put the export status
-  on a line outside the panel, or it vanishes in the same frame it is written.
-- **Refuse to export while Save is armed.** Export ships what storage holds, and an
-  armed field means the block on screen says something storage has not been told. Putting
-  the button beside that field makes this the easy accident rather than the rare one. Say
-  which it is and let him save first or discard, but never hand him a file quietly
-  missing the lines he is looking at as he clicks. The check runs first, before any part
-  of the reset, or the reset has already blanked the evidence. And because closing the
-  panel does not disarm Save - only reopening or a successful save does - so the field can
-  be armed while it is
-  out of sight: open the panel and put the cursor in it before refusing. A refusal that
-  points at something he cannot see is not a refusal, it is an error message.
-- **Bake the notes as data, never as rendered markup.** One
-  `<script type="application/json">` block holding the same shape `localStorage` holds,
-  and the page boots from it. Serializing the live DOM alone loses every `<textarea>` he
-  typed into, because a typed value never reaches `outerHTML` - it is exactly the content
+- **Bake the notes as data, never as rendered markup.** One `<script
+  type="application/json">` block holding the same shape `localStorage` holds, and the
+  page boots from it. Serializing the live DOM alone loses every `<textarea>` he typed
+  into, because a typed value never reaches `outerHTML` - it is exactly the content
   being exported that goes missing. Escape `<` as `\u003c` on the way in, or the first
   note containing a closing script tag ends the block early and takes the page with it.
   Written here as `<\/script>` on purpose: the bare form terminates a `<script>` element
-  from inside a string or a comment just as readily, so this warning copied verbatim into
-  the page is itself the bug.
-- **Exactly one baked block, replaced rather than appended.** The export rebuilds it from
-  current storage, which is what makes an export of an export carry the notes as they are
-  now. Append instead and a few generations down which block wins is a coin flip.
+  from inside a string or a comment just as readily, so this warning copied verbatim
+  into the page is itself the bug.
+- **Exactly one baked block, replaced rather than appended.** The export rebuilds it
+  from current storage, which is what makes an export of an export carry the notes as
+  they are now. Append instead and a few generations down which block wins is a coin
+  flip.
 - **Write what each note renders as into the markup too**, then boot idempotently over
   it. Idempotent structurally and not only by value: an exported file already carries
   the boxes in its markup, so a boot that creates one per row appends a second. Reuse
@@ -181,26 +180,21 @@ the three places the corner costs something.
   own on the page to reach a reader whose script never runs - which doubles as the index
   of what has a note, and so is not dead weight.
 - **Reset transient state before serializing** - close the panel, drop focus, clear any
-  mid-edit styling, or the file opens frozen in whatever the moment of export happened to
-  look like. The text block is derived, so clear it outright - `textContent`, not just
-  `value` - and let boot rebuild it. Bake the render as it stood and the field ships
-  disagreeing with the data behind it.
+  mid-edit styling, or the file opens frozen in whatever the moment of export happened
+  to look like. The text block is derived, so clear it outright - `textContent`, not
+  just `value` - and let boot rebuild it. Bake the render as it stood and the field
+  ships disagreeing with the data behind it.
 - **Baked notes seed storage only when the page has none.** Namespace the store by the
   page's own identity rather than its filename, so a renamed or moved export still finds
-  its notes. The price is that an export opened beside its original meets the notes
-  already there. Chrome pools every `file://` document into one origin whatever directory
-  it sits in - tested, not assumed - so on his machine that is the ordinary case for a
-  local file and not a rare one. Safari is unverified and may refuse `file://` storage
-  outright rather than share it, which the try/catch rule above already absorbs. So the
-  collision costs a glance and never a dismissal: the browser's notes stay live and
-  untouched, one quiet line at the top says what the file carries and offers to take it
-  instead, and ignoring that line is a correct way to use the page. Never merge silently -
-  that is the Save failure again - but never make him clear something away to read his
-  own page.
-- **Name it as a deliverable** - `Title Case With Spaces - YYYY-MM-DD.html`. The date
-  earns its place here, because he will export the same page more than once.
-- **The download can fail.** It is inert inside the Artifact sandbox and a blocked blob
-  URL fails quietly. Catch it, say so, and point at the text block, which still works.
+  its notes - which means an export shares that namespace with the page it came from.
+  Chrome pools every `file://` document into one origin whatever directory it sits in,
+  tested and not assumed, so an export meeting its original's notes is the ordinary case
+  on his machine and not a rare one. Safari is unverified and may refuse `file://`
+  storage outright, which the try/catch rule already absorbs. The collision costs a
+  glance and never a dismissal: the browser's notes stay live and untouched, one quiet
+  line says what the file carries and offers to take it instead, and ignoring that line
+  is a correct way to use the page. Never merge silently - that is the Save failure
+  again - and never make him clear something away to read his own page.
 
 Say plainly in the handover that the notes live in that one browser until he exports or
 copies them out, and that an exported file is a snapshot: edit it and edit the original
