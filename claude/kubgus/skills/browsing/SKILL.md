@@ -30,7 +30,7 @@ and belongs in the answer, not an assumption to skip past silently.
 
 | Approach | File | Use when |
 |---|---|---|
-| Playwright MCP | `approaches/playwright-mcp.md` | The default, and the only one wired up |
+| Playwright MCP | `references/playwright-mcp.md` | The default, and the only one wired up |
 
 Read the approach file before the first navigation. The mechanics below hold whichever one
 is in play; everything version-specific and tool-specific lives in the approach file.
