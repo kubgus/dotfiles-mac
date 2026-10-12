@@ -27,6 +27,7 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | Path | What it holds |
 |---|---|
 | `_setup.sh` | Entry point. Dispatches to the domains. |
+| `CLAUDE.md` | Context for an agent working in this repo - the rules, not the reasons. |
 | `_setup/` | One script per domain, plus `lib.sh`. |
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
