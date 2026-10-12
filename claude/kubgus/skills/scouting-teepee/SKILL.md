@@ -22,23 +22,19 @@ implying it does, and it is worth writing up afterwards.
 
 ## Access
 
-Driven through a browser - the `browsing` skill covers the approach to use and the
-mechanics that hold on any site, and this section is only what tee-pee adds on top.
-Tee-pee needs a session already authenticated in that browser, and the approach may not
-keep one across a restart, so expect to be asking for a login more often than once.
+Read the `browsing` skill first. Its rules hold here - never handle a credential, verify
+every landing URL, re-query before acting, confirm the element you hit is the one that
+acts, close the arithmetic after a write. This file is only what tee-pee adds.
 
-**Never handle the password.** If a navigation lands on `/login`, stop and ask Kubo to log
-in to the automation browser himself. The session is his; typing a credential on his
-behalf is not a shortcut worth taking.
-
-Sessions drop without warning and a stale one redirects mid-task, so check the landing URL
-after every navigation rather than assuming it held. It sometimes comes back on its own -
-a later navigation lands on `/user/profile` instead of `/login` - so re-test before
-concluding you are locked out.
+The session drops without warning, and the approach may not keep it across a restart, so
+expect to ask for a login more than once. A landing on `/login` means stop and ask Kubo to
+log in to the automation browser. The session sometimes comes back on its own - a later
+navigation lands on `/user/profile` instead - so re-test before you conclude you are
+locked out.
 
 ## Site mechanics
 
-Tee-pee is PrimeFaces on JSF. Five consequences apply on every page, and each of them
+Tee-pee is PrimeFaces on JSF. Four consequences apply on every page, and each of them
 fails silently rather than loudly:
 
 **One ajax request at a time.** Overlapping requests stale the JSF ViewState; the next one
@@ -50,12 +46,6 @@ because a queued-but-unsent request leaves `jQuery.active` at zero.
 rebuilt, so a node reference never survives a request and a `querySelector` landing
 mid-update returns `null`. Re-query every time, and wait for the container to be back
 before reading it.
-
-**Visible text often belongs to a wrapper, not the control.** The attendee dialog's submit
-is the clearest case: `[id$="addButtonId"]` is a `<div>` whose `innerText` reads
-`Pridať (61)`, while the button that actually submits is `[id$="addPeopleBtnId"]` inside
-it. Clicking the wrapper looks like it worked and does nothing. Before trusting a click,
-confirm the element you hit carries the handler.
 
 **Search fields match substrings, across more than you expect.** The person search matches
 nicknames and unit names as well as names, diacritics-insensitively. `Lup` returns
@@ -69,16 +59,10 @@ diacritics are dropped on the way in often enough (`Kralik` for `Králik`, `Riec
 
 ## Writing to tee-pee
 
-It is a shared org system other people read, and most of its writes have no undo beyond
-doing the inverse by hand. Two habits, both learned the expensive way:
-
-- **Act only where the match is unambiguous.** Where it is not, ask Kubo with the
-  candidates and enough context to answer - the unit each candidate belongs to, and who
-  else from that unit is already involved. Guessing a near-match to avoid a question is
-  the one thing not to do.
-- **Close the arithmetic at the end.** `input = written + already there + skipped`, every
-  skipped item named and explained. A count that closes is the only cheap proof nothing
-  was silently dropped.
+It is a shared org system other people read, so the `browsing` write rules apply in full.
+What tee-pee adds: when a match is ambiguous, the question to Kubo carries the unit of
+each candidate and who else from that unit is already involved. Without the unit, "which
+Michal Dubovec" has no answer.
 
 ## Finding your way around
 
