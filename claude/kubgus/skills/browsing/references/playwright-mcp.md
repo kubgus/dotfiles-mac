@@ -4,16 +4,18 @@ The default approach, and the only one currently wired up. Tools are the
 `mcp__plugin_kubgus_playwright__*` set - `browser_navigate`, `browser_snapshot`,
 `browser_click`, `browser_evaluate` and the rest.
 
-Everything below was read off `--help` of the pinned server rather than remembered.
-Re-check it when the server moves: flags are added and defaults change between releases,
-and a flag that quietly does nothing looks exactly like a flag that worked.
+Everything below was read off `--help` and the source of the local checkout at
+`~/Sources/playwright-mcp` (v0.0.80, `8a13ef8`) rather than remembered. Re-check it when
+`node cli.js --version` moves: flags are added and defaults change between releases, and a
+flag that quietly does nothing looks exactly like a flag that worked.
 
-## First run of a fresh profile
+## Keychain prompts
 
-A fresh Chromium profile raises a **macOS keychain prompt** on first launch and blocks
-until it is answered. Launched in the background it looks like a hang, because the dialog
-is behind whatever window has focus. `--use-mock-keychain` suppresses it, which is the
-right answer for automation that stores nothing worth keychain protection.
+Playwright launches Chromium with `--use-mock-keychain` and `--password-store=basic` in
+its own default switches, so the MCP never raises the macOS keychain prompt. A Chrome you
+launch yourself does: a fresh profile blocks on the prompt, and in the background that
+looks like a hang, because the dialog sits behind the focused window. Pass
+`--use-mock-keychain` there.
 
 ## Local files are blocked by default, and the default is narrow
 
