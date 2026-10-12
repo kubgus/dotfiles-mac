@@ -1,6 +1,6 @@
 # Operator
 
-Jakub Gustafik, "Kubo". Bratislava, Slovakia (CET). Freelance project manager and
+Jakub Guštafik, "Kubo". Bratislava, Slovakia (CET). Freelance project manager and
 developer finishing his degree; leads a small team.
 
 - **Self-taught** - skip basics, do not pre-digest material.

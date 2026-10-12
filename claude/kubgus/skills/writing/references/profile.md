@@ -6,7 +6,7 @@ already failed.
 
 ## Now
 
-- **Project Manager and Analyst at Vedecke okienko** (freelance, since 2026-05): leads a
+- **Project Manager and Analyst at Vedecké Okienko** (freelance, since 2026-05): leads a
   team of 4 building a learning platform from scratch; owns project scope and technical
   specs, CI/CD pipelines, code quality standards, and conventions for AI-assisted
   development; mentors the team.
@@ -20,7 +20,7 @@ already failed.
   and 2 client-facing, with teams up to 10. Found and fixed a critical auth vulnerability
   in a client project.
 - **Group leader of a 30+ member scout troop** at Scouting Slovakia (since 2022-12),
-  having founded 3 sub-groups. Scout name Slizo.
+  having founded 3 sub-groups. Scout name Slížo.
 - **Mentored kids aged 7-17 at CoderDojo Bratislava** (2023-09 to 2024-06).
 
 ## Shape of him
