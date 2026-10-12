@@ -1,6 +1,6 @@
 ---
 name: deliverables
-description: How Kubo wants generated files built, edited, named and handed over. Use whenever you are about to create or change a document, note, export, page or deliverable - a PDF, Word or docx, Excel or xlsx, PowerPoint or pptx, Markdown note, HTML page, report, memo, dashboard, agenda, invitation or handout - including editing, restyling, extending, rewriting or fixing one that already exists, whether he wrote it or you did; or when naming a file you created, or deciding where a finished file goes, or deciding whether a page ships as a local file or a published artifact. Triggers on "make a pdf", "export this", "save this as", "write it to a file", "generate a report", "visualize this", "make me a page", "what should I call this file", "put it in a document", and equally on "edit this page", "change the styling", "add a section", "fix this document", "update that html", "rename it", "republish it", or a path to an existing .html, .md, .pdf, .docx, .xlsx or .pptx handed over with a change to make. Use it even when the format looks obvious, the file looks trivial or the edit looks like a one-line tweak - the naming, the placement, the look and the publish-or-keep-local call are his conventions, not defaults. Not for source code, which follows its own language's conventions.
+description: How Kubo wants generated files built, edited, named and handed over. Use whenever you are about to create or change a document, note, export, page or deliverable - a PDF, Word or docx, Excel or xlsx, PowerPoint or pptx, Apple Pages or .pages, Markdown note, HTML page, report, memo, dashboard, agenda, invitation or handout - including editing, restyling, extending, rewriting or fixing one that already exists, whether he wrote it or you did; or when naming a file you created, or deciding where a finished file goes, or deciding whether a page ships as a local file or a published artifact. Triggers on "make a pdf", "export this", "save this as", "write it to a file", "generate a report", "visualize this", "make me a page", "what should I call this file", "put it in a document", and equally on "edit this page", "change the styling", "add a section", "fix this document", "update that html", "rename it", "republish it", or a path to an existing .html, .md, .pdf, .docx, .xlsx, .pptx or .pages handed over with a change to make. Use it even when the format looks obvious, the file looks trivial or the edit looks like a one-line tweak - the naming, the placement, the look and the publish-or-keep-local call are his conventions, not defaults. Not for source code, which follows its own language's conventions.
 ---
 
 # Deliverables
@@ -15,6 +15,8 @@ description: How Kubo wants generated files built, edited, named and handed over
   `.docx` or `.pdf`, and the choice is his.
 - **Read the format's own skill first** - `docx`, `pdf`, `xlsx`, `pptx`; `dataviz` before
   the first line of any chart, in any medium; for HTML the pair named under *HTML pages*.
+  Pages has no skill: read `references/pages.md`, which also covers reading and rendering
+  any PDF without poppler.
 - **Name the build approach, never pick it silently.** The axis is a Python library
   (openpyxl, python-docx) against hand-built OOXML plus `zip`. He may not want Python in
   play, and that is a decision rather than an implementation detail.
