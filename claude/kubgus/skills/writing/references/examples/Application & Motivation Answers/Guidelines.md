@@ -5,44 +5,23 @@ applications. First person, written **as** Kubo. Usually a word cap and a Google
 
 ## The core rule - write as him, not about him
 
-The failure mode these examples exist to prevent is drafting from the operator profile like a
-CV. `CLAUDE.local.md` describes him so you *recognise what he means*, not so it can be recited
-back as credentials. He caught this directly: the good draft happened because it "didn't use
-the typical AI banter and didn't blindly parrot things I've told you about myself."
-
-- **Use the one fact the sentence needs, drop the rest.** A list of roles reads as a CV
-  paste-in. One role, named because the argument turns on it, reads as a person talking.
-- **Understated beats impressive.** "I have become good at shipping things without ever knowing
-  whether they were worth shipping" lands; "I lead a team of four and own the technical specs"
-  is the same fact performed.
-- **An admitted weakness beats a polished strength.** Selection panels have read a thousand
-  strengths. The honest gap is the differentiator, and most of these programs say outright they
-  want people who "want to work on themselves."
-- **One flat true sentence beats a constructed arc.** No rhetorical build, no callback endings,
-  no three-part rhythm. If a line reads as performance rather than as something he would have
-  typed at a keyboard, cut it.
-- The thoroughness default in `CLAUDE.local.md` §2 governs answers written *to* him. It does
-  not govern prose written *as* him.
+`SKILL.md` owns the rule; this genre is where it bites hardest. He caught it directly: the
+good draft happened because it "didn't use the typical AI banter and didn't blindly parrot
+things I've told you about myself." Most of these programs say outright that they want
+people who "want to work on themselves", so the honest gap is the differentiator here.
 
 ## Register
 
 - Plain declaratives, mostly short. States a reason flatly and moves on: *"the troop is the
   reason I grew up the way I did, so I took it."*
-- **Diagnose before prescribing.** His own instinct, and it is what makes an answer read as
-  judgement rather than effort: name why the thing was broken, then what you did about it.
 - **Name the counter-argument to your own idea.** The strongest 30 words in the study-interest
   answer are the objection to it. Anyone can say a field is exciting; naming what makes it hard
   separates interest from enthusiasm.
-- Typography per `CLAUDE.local.md` §5 - plain hyphen, straight quotes, no emoji.
 
 ## Structure
 
-- **Lead with the stake, not the context.** The situation goes in the subordinate clause.
-- **Numbers or nothing.** "A large decline" is free to write and worth nothing; "fallen to fewer
-  than 10 registered members" is credibility at the cost of one clause. Bracket the ones only he
-  has (`[N]`) rather than dropping the slot.
-- **End on the fact that carries weight.** Drafts trail off into subordinate clauses - the
-  strongest fact is usually buried there. Move it to the last sentence.
+`SKILL.md` owns the structure rules. A figure counts most in this genre: "fallen to fewer
+than 10 registered members" is credibility at the cost of one clause.
 
 ## Question types - they are not all worth the same effort
 

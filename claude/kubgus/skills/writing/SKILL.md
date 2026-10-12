@@ -65,16 +65,16 @@ Slovak specifics:
 
 ## Genre guidelines
 
-Each folder under `references/examples/` opens with a `Guidelines.md` that owns its genre.
-Read the matching one before drafting.
+Folders under `references/examples/`. Where a folder has a `Guidelines.md`, it owns its
+genre - read it before drafting. The other folders hold examples only.
 
-| Genre | Folder |
-|---|---|
-| Applications, motivation answers, scholarships | `Application & Motivation Answers/` |
-| Recruiter threads, declining offers | `Recruiter & Job Messages/` |
-| Parent-facing scouting announcements, enrollment | `Scouting Parent Messages/` |
-| Blog posts, technical-but-personal | `Personal Blog/` |
-| School assignments | `School Assignments/` |
+| Genre | Folder | Guidelines |
+|---|---|---|
+| Applications, motivation answers, scholarships | `Application & Motivation Answers/` | yes |
+| Recruiter threads, declining offers | `Recruiter & Job Messages/` | yes |
+| Parent-facing scouting announcements, enrollment | `Scouting Parent Messages/` | yes |
+| Blog posts, technical-but-personal | `Personal Blog/` | examples only |
+| School assignments | `School Assignments/` | examples only |
 
 Examples carry `[PLACEHOLDER]` tokens where a real name, address or organisation was
 removed. Keep them as placeholders; never invent values to fill them.
