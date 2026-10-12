@@ -33,7 +33,6 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `config/` | Linked wholesale to `~/.config`. |
 | `claude/` | Claude Code: the global context file (`operator.md`, linked as `~/.claude/CLAUDE.md`) and the status line. |
 | `claude/kubgus/` | The `kubgus` plugin - output style, skills, hooks, MCP servers. |
-| `claude/backstage-teardown.md` | What is left of the retired backstage library, and the order to take it down in. |
 | `pi/` | Pi agent config. |
 | `zprofile` | Linked to `~/.zprofile`. |
 

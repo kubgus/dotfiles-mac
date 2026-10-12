@@ -71,3 +71,6 @@ so it earns more care than a read.
 - **Dry-run first where the site allows it**, and say what you are about to do before you
   do it in bulk. A loop that runs twice because the first pass looked like it failed is
   the classic way to double-register a roster.
+- **A success message is not proof.** Re-read the state after a write, or check the
+  network response. A dashboard has reported success for a request its own API refused,
+  with the refusal visible only in the network log.

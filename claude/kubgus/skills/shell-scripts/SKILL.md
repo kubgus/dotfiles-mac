@@ -48,6 +48,7 @@ BSD against GNU is where portability actually breaks:
 | `date`, `stat`, `mktemp` | Different flags entirely. Check before reaching for one. |
 | `timeout(1)` | Does not exist on macOS. |
 | `grep -P` | Not in BSD grep. |
+| Unicode filenames | macOS hands back many names decomposed (NFD); Linux keeps the bytes it got. Normalise both sides to NFC before comparing, or a Slovak name matches nothing. |
 
 ## Idempotency
 
