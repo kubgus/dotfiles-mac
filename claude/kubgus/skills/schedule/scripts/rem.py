@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# ///
 """Read the macOS Reminders store directly. Read-only, stdlib only.
 
 Reminders keeps one Core Data store per account under a single group container, plus

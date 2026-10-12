@@ -36,6 +36,9 @@ scripts/rem.py lists                lists and groups, marking hidden ones
 `today..+14d`. `rem.py` also takes `all`. Flags work on either side of the subcommand;
 `--json` and `--config PATH` exist on both.
 
+Run the scripts as written. The shebang runs them through `uv` on a uv-managed Python
+3.11 or later; `python3 scripts/...` gets the system 3.9 and fails on `tomllib`.
+
 - **Calendar**: `--calendar Skyro` (repeatable, substring), `--all` (drop the calendar
   filter), `--show-free`, `--show-declined`, `--no-dedupe`. `event --open` reveals it in
   Calendar.app - only when he asks, it steals focus.

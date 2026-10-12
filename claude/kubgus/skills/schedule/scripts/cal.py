@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# ///
 """Read the macOS Calendar store directly. Read-only, stdlib only.
 
 Everything lives in one SQLite file that Calendar.app keeps in sync. This reads a
