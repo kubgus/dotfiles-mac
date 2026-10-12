@@ -1,6 +1,6 @@
 ---
 name: deliverables
-description: How Kubo wants generated files built, edited, named and handed over. Use whenever you are about to create or change a document, note, export, page or deliverable - a PDF, Word or docx, Excel or xlsx, PowerPoint or pptx, Apple Pages or .pages, Markdown note, HTML page, report, memo, dashboard, agenda, invitation or handout - including editing, restyling, extending, rewriting or fixing one that already exists, whether he wrote it or you did; or when naming a file you created, or deciding where a finished file goes, or deciding whether a page ships as a local file or a published artifact. Triggers on "make a pdf", "export this", "save this as", "write it to a file", "generate a report", "visualize this", "make me a page", "what should I call this file", "put it in a document", and equally on "edit this page", "change the styling", "add a section", "fix this document", "update that html", "rename it", "republish it", or a path to an existing .html, .md, .pdf, .docx, .xlsx, .pptx or .pages handed over with a change to make. Use it even when the format looks obvious, the file looks trivial or the edit looks like a one-line tweak - the naming, the placement, the look and the publish-or-keep-local call are his conventions, not defaults. Not for source code, which follows its own language's conventions.
+description: How Kubo wants generated files built, edited, named and handed over. Use whenever you are about to create or change a document, note, export, page or deliverable - a PDF, Word or docx, Excel or xlsx, PowerPoint or pptx, Apple Pages or .pages, Markdown note, HTML page, report, memo, dashboard, agenda, invitation or handout - including editing, restyling, extending, rewriting or fixing one that already exists, whether he wrote it or you did; or when naming a file you created, or deciding where a finished file goes, or deciding whether a page ships as a local file or a published artifact. Triggers on "make a pdf", "summarize in HTML", "HTML summary of", "export this", "save this as", "write it to a file", "generate a report", "visualize this", "make me a page", "what should I call this file", "put it in a document", and equally on "edit this page", "change the styling", "add a section", "fix this document", "update that html", "rename it", "republish it", or a path to an existing .html, .md, .pdf, .docx, .xlsx, .pptx or .pages handed over with a change to make. Use it even when the format looks obvious, the file looks trivial or the edit looks like a one-line tweak - the naming, the placement, the look and the publish-or-keep-local call are his conventions, not defaults. Not for source code, which follows its own language's conventions.
 ---
 
 # Deliverables
@@ -101,6 +101,25 @@ The Artifact skeleton is not there, so the page has to stand alone:
 - **Downloads work locally but are inert inside the Artifact sandbox.** Fine to offer, but
   never as the only way to get data out of the page, or the page breaks silently if it is
   ever published.
+
+### HTML responses
+
+When he wants a reply as a page - "summarize in HTML", "an HTML summary of the previous
+message" - it is a page like any other, with four rules of its own.
+
+- **Know which reply.** "The previous message" may mean the substantive answer two turns
+  back, not the report just above it. If the source is not certain, ask.
+- **Ask where it goes**, once per project, and write the answer into that project's
+  `CLAUDE.md` so the question does not come back. Offer `Responses/NN Title Case Name.html`,
+  numbered from 01 as the highest existing number plus one, never overwriting an earlier
+  one. With no project folder, ask every time.
+- **Restructure, do not transcribe.** Group findings by what they affect, not by label
+  number. Actions become next steps, risks become open risks, decisions keep their cost.
+  The page is a file, so the reply conventions stay behind: no label ids, no STE. Its
+  language follows the source reply. A footer names the source files and the date.
+- **Light on design.** Such a page is read, not presented: skip `frontend-design`, keep
+  the `artifact-design` contract and `references/page-design.md`. Check phone width and
+  dark mode in a browser before handing it over, or say that you did not.
 
 ### Notes on a page
 
