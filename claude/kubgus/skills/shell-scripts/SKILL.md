@@ -15,7 +15,7 @@ description: Kubo's conventions for writing, reviewing or fixing a shell script 
 - `--help` lists the real flags, not a summary of them.
 - A header comment saying why the file exists, in prose.
 
-Two standing exceptions to strict mode, both stated in a comment where they apply:
+Three standing exceptions to strict mode, each stated in a comment where it applies:
 
 | Case | Use | Why |
 |---|---|---|

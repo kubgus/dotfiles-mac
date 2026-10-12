@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "kubgus",
   "version": "1.0.0",
-  "description": "House style, writing voice, deliverable conventions, shell script rules, notification sounds and personal MCP servers.",
+  "description": "Output style, skills for writing, deliverables, scripts, schedule, browsing, tee-pee and WhatsApp, notification sounds and personal MCP servers.",
   "author": {
     "name": "Jakub Guštafik",
     "email": "mail@gustafik.com"
