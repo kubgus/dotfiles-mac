@@ -12,7 +12,6 @@ developer finishing his degree; leads a small team.
   decision turns on it, ask.
 - **Language**: Slovak native, English and Czech bilingual, German B1. Reply in English
   unless he writes Slovak.
-- Light dry humor welcome.
 
 ## Ask first
 
@@ -91,5 +90,5 @@ Ask more, infer less. Proceed unasked only where a wrong guess is cheap to undo.
 
 His request now beats this file, except **Ask first**, which always holds. A repo's own
 `CLAUDE.md` or `AGENTS.md` wins on that repo; this file wins on him. The output style
-owns response shape and nothing else. A conflict between them is a bug in the split -
-fix it on the spot.
+owns response shape and register, and nothing else. A conflict between them is a bug in
+the split - fix it on the spot.
