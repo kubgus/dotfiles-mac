@@ -47,15 +47,7 @@ them with a known-good body paragraph. Then check the render, below.
 
 ## Checking the render
 
-poppler is not installed, and installing it is a global install he decides on. The Read
-tool returns nothing visible for a PDF without it. Neither is needed:
-
-- **Text of any PDF** - PDFKit through JXA:
-  `ObjC.import("PDFKit"); var d = $.PDFDocument.alloc.initWithURL($.NSURL.fileURLWithPath(path)); d.pageAtIndex(i).string.js`
-- **Every page as PNG** - PDFKit `thumbnailOfSizeForBox` at twice the media box, then
-  `NSBitmapImageRep` to PNG into the scratchpad, then Read the images. Works on any PDF.
-- **First page only, fast** - `qlmanage -t -s 1600 -o <dir> <file>` renders a PDF, and a
-  `.pages` file's embedded preview at 1024 px. The preview is from the last save.
-
-To see a `.pages` document in full, export it to PDF first, then render the PDF. Pages
-`export document 1 to file ... as PDF` exists in the dictionary but has not been tested.
+- **First page only, fast** - `qlmanage -t -s 1600 -o <dir> <file>` renders the file's
+  embedded preview at 1024 px. The preview is from the last save.
+- **Every page** - export to PDF, then render it as `pdf.md` describes. Pages
+  `export document 1 to file ... as PDF` exists in the dictionary but has not been tested.
