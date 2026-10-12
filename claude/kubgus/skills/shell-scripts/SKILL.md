@@ -1,6 +1,6 @@
 ---
 name: shell-scripts
-description: Conventions for writing, reviewing or fixing a shell script for Kubo - bash or zsh, a one-off, a dotfiles helper, or anything that ends up on his PATH. Use when asked to "write a script", "make this a script", "add a command", "automate this", "wrap this in a shell script", "fix this bash", or when editing any .sh file. Covers strict mode, shellcheck, symlink-safe path resolution and macOS/Linux portability.
+description: Kubo's conventions for writing, reviewing or fixing a shell script - bash or zsh, a one-off, a dotfiles helper, or anything on his PATH. Use for "write a script", "make this a script", "add a command", "automate this", "wrap this in a shell script", "fix this bash", or any edit to a .sh file. Covers strict mode, shellcheck, symlink-safe paths and macOS/Linux portability.
 ---
 
 # Shell scripts

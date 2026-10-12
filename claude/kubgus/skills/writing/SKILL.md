@@ -1,6 +1,6 @@
 ---
 name: writing
-description: Kubo's voice rules for anything written in prose - drafting or editing an email, message, reply, application answer, cover letter, motivation letter, blog post, announcement, bio or social post, and anything written AS him in first person. Also for editing, tightening or rewriting a draft he hands over, matching register, or choosing between Slovak, Czech and English. Triggers on "write", "draft", "rewrite this", "edit this", "make this sound like me", "reply to this email", "write a post", "tighten this", "napis", "prepis". Read it before the first sentence, not after a draft exists.
+description: Kubo's voice rules for prose - drafting or editing an email, message, reply, application or motivation answer, cover letter, blog post, announcement, bio or social post, anything written as him in first person, or a draft he hands over to tighten or rewrite. Also for matching register and choosing between Slovak, Czech and English. Triggers: "write", "draft", "rewrite this", "edit this", "make this sound like me", "reply to this email", "write a post", "tighten this", "napis", "prepis". Read it before the first sentence, not after a draft exists.
 ---
 
 # Writing as Kubo

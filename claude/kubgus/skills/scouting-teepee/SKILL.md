@@ -1,6 +1,6 @@
 ---
 name: scouting-teepee
-description: Working with tee-pee, the Slovenský skauting membership system at skauting.tee-pee.com - events, people, units, rosters and reports - by driving it in the browser. Use this whenever a task touches tee-pee at all: any skauting.tee-pee.com URL, or talk of prihlásení, pozvaní, prezenčná listina, an event or podujatie id, a turnus roster, an oddiel or zbor, or registering people for a camp. Use it even when the request sounds like a couple of manual clicks, because tee-pee is a PrimeFaces app whose selection state, ViewState and person matching all fail quietly rather than loudly. Read this for access and site-wide mechanics, then the reference file for the specific area.
+description: Tee-pee, the Slovenský skauting membership system at skauting.tee-pee.com - events, people, units, rosters and reports - driven in the browser. Use whenever a task touches tee-pee: a skauting.tee-pee.com URL, prihlásení, pozvaní, prezenčná listina, an event or podujatie id, a turnus roster, an oddiel or zbor, or registering people for a camp. Use it even when it sounds like a few manual clicks: tee-pee is a PrimeFaces app whose selection state, ViewState and person matching fail quietly.
 ---
 
 # Tee-pee

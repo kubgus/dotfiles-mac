@@ -1,6 +1,6 @@
 ---
 name: speak
-description: Speaks Claude's last response aloud using macOS text-to-speech (say). Use whenever the user asks Claude to speak, say something out loud, read a response aloud, or narrate what it just said - e.g. "say that", "read that to me", "speak it".
+description: Reads Claude's last response aloud with macOS text-to-speech (`say`). Use when he asks to speak, say something out loud, read a response aloud or narrate it - "say that", "read that to me", "speak it".
 ---
 
 # Speak

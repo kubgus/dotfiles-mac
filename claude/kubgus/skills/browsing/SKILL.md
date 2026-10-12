@@ -1,6 +1,6 @@
 ---
 name: browsing
-description: Driving a real browser to do something on a website - clicking, filling forms, reading a page that will not come out any other way, or automating a site with no API. Use whenever a task means operating a site rather than fetching from it: "log into", "click through", "fill this form", "scrape", "check what that page says", "automate this site", "drive the browser", or any request that names a URL and an action to perform on it. Covers the approach-agnostic discipline and points at the specific approach to use. Not for fetching a document a plain HTTP request would return, and not for opening a local HTML file, both of which have cheaper answers.
+description: Driving a real browser on a website - clicking, filling forms, reading a page no plain fetch returns, automating a site with no API. Use whenever a task means operating a site rather than fetching from it: "log into", "click through", "fill this form", "scrape", "check what that page says", "automate this site", "drive the browser", or a URL with an action to perform on it. Holds the site-agnostic rules and points to the approach in use. Not for a document a plain HTTP request returns, or for opening a local HTML file.
 ---
 
 # Browsing

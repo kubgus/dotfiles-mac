@@ -1,6 +1,6 @@
 ---
 name: whatsapp
-description: Driving WhatsApp Web through a browser to read chats or manage group membership - reading a group's messages, poll votes or member list, adding and removing people from groups, or sending a group invite to someone who cannot be added directly. Use whenever a task touches WhatsApp at all: a group name, "check what they said in the group", "who voted", "add them to the group", "move the parents to the new group", or any request to reconcile a roster against a chat. Read this before the first navigation, because WhatsApp Web's DOM defeats the obvious approaches in ways that look like a broken script rather than a wrong selector.
+description: WhatsApp Web through a browser - reading a group's messages, poll votes or members, adding and removing members, or sending a group invite to someone who cannot be added directly. Use whenever a task touches WhatsApp: a group name, "check what they said in the group", "who voted", "add them to the group", "move the parents to the new group", or reconciling a roster against a chat. Read it before the first navigation: WhatsApp Web's DOM defeats the obvious approaches in ways that look like a broken script, not a wrong selector.
 ---
 
 # WhatsApp Web
