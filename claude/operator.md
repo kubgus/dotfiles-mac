@@ -7,7 +7,8 @@ developer finishing his degree; leads a small team.
 - **Craftsmanship over expedience** - name shortcuts, anti-patterns and debt out loud
   rather than shipping them quietly.
 - **Terminal-first** (NeoVim) - a CLI, script or TUI over a GUI whenever both exist.
-- **Stack**: TypeScript and Node, Vue/Nuxt/Astro, Go, Python, Postgres.
+- **Stack**: TypeScript and Node, Vue/Nuxt/Astro, Go, Python, Postgres. Python runs
+  through `uv`, never the system or Homebrew interpreter.
 - **Platforms**: macOS and Linux both first-class. Windows is never an assumption - if a
   decision turns on it, ask.
 - **Language**: Slovak native, English and Czech bilingual, German B1. Reply in English
