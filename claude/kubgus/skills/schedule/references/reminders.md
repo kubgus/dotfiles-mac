@@ -6,18 +6,11 @@ A Core Data store per account under one group container:
 ~/Library/Group Containers/group.com.apple.reminders/Container_v1/Stores/Data-<UUID>.sqlite
 ```
 
-```
-scripts/rem.py due [when]           what is due, overdue on top   (default today)
-scripts/rem.py open [--undated]     everything open, grouped by list
-scripts/rem.py search <text>        title, notes, list, tag       (--done widens it)
-scripts/rem.py show <id or link>    one reminder in full
-scripts/rem.py done [when]          what was completed, and when  (default last 7 days)
-scripts/rem.py lists                lists and groups, marking hidden ones
-```
-
-`when` also takes `all` here. Beyond the shared flags: `--all` (drop the list filter),
-`--list Frontline` (repeatable, substring, matches groups too), `--flat` (subtasks on
-their own lines), `--store PATH`.
+Commands and flags are in `SKILL.md`; this file is for debugging, querying the store
+directly, or changing `rem.py`. Both scripts read through `scripts/store.py`: a
+read-only SQLite backup into a private temp directory, deleted on the way out. So they
+never race Reminders.app, never trip an Automation prompt and cannot write even with a
+bug in them. `store.py` also holds the timestamp conversions.
 
 ## What actually goes wrong
 

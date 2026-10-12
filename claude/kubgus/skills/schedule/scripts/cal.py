@@ -3,7 +3,7 @@
 
 Everything lives in one SQLite file that Calendar.app keeps in sync. This reads a
 snapshot of it, so it can never corrupt the store and never prompts for Automation
-access. See SKILL.md for the timestamp traps this encodes.
+access. See references/calendar.md for the traps this encodes.
 """
 
 from __future__ import annotations

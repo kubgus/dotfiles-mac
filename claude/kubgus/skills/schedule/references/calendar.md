@@ -9,17 +9,11 @@ Everything is in one SQLite file that Calendar.app keeps synced:
 `~/Library/Calendars/` is empty on current macOS - it is the old location and a dead
 end.
 
-```
-scripts/cal.py event <ical:// link or id>    one event in full
-scripts/cal.py agenda [when]                 what is on            (default today)
-scripts/cal.py search <text> [--range when]  title, notes, location, attendees
-scripts/cal.py free [when] [--between HH:MM-HH:MM] [--min 30]
-scripts/cal.py conflicts [when]              overlapping commitments
-scripts/cal.py calendars                     what exists, what is hidden
-```
-
-Beyond the shared flags: `--all` (drop the calendar filter), `--show-free`,
-`--show-declined`, `--calendar Skyro` (repeatable, substring), `--no-dedupe`.
+Commands and flags are in `SKILL.md`; this file is for debugging, querying the store
+directly, or changing `cal.py`. Both scripts read through `scripts/store.py`: a
+read-only SQLite backup into a private temp directory, deleted on the way out. So they
+never race Calendar.app, never trip an Automation prompt and cannot write even with a
+bug in them. `store.py` also holds the timestamp conversions.
 
 ## What actually goes wrong
 
@@ -74,9 +68,6 @@ link". The UUID is `CalendarItem.UUID`; the query string just means "open it, ex
 `cal.py event` pulls the id out of any of the link forms, a raw UUID, or a Google event
 id.
 
-`--open` also reveals it in Calendar.app. Only pass that when he asks to see it there;
-it steals focus.
-
 ## Hidden calendars
 
 As currently configured, `agenda` skips namedays, holidays and birthdays because they
@@ -104,6 +95,3 @@ on rules rather than on anything Calendar.app has agreed with.
 `--json` carries `raw_status` if something ever looks wrong. Organizer and "you" come
 from `CalendarItem.organizer_id` and `self_attendee_id` rather than role codes, because
 on a Google shared calendar the organizer is the calendar itself, not a person.
-
-**All-day events do not block time** in `free`. An all-day "Bozin XXII." would otherwise
-swallow every slot for three days; it is listed in the day's header as context instead.

@@ -4,7 +4,7 @@
 Reminders keeps one Core Data store per account under a single group container, plus
 a couple of empty decoys. This picks the live one, snapshots it, and reads the
 snapshot - so it can never write to your reminders and never prompts for Automation
-access. See SKILL.md for the traps this encodes.
+access. See references/reminders.md for the traps this encodes.
 """
 
 from __future__ import annotations

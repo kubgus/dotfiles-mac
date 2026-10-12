@@ -6,52 +6,49 @@ description: Read what Kubo has committed to - events on his macOS Calendar, tas
 # Schedule
 
 Two macOS stores, one question: what has he already committed to. Events live in
-Calendar, tasks live in Reminders, and a planning question often wants both.
-
-| Store | Script | Reference | Answers |
-|---|---|---|---|
-| Calendar | `scripts/cal.py` | `references/calendar.md` | What is on, when he is free, what clashes, who accepted |
-| Reminders | `scripts/rem.py` | `references/reminders.md` | What is due, what is overdue, what is open, what got done |
-
-Read the reference for the store you are querying before you query it. Each one covers
-its schema, its traps and its command surface. What follows holds for both.
+Calendar, tasks live in Reminders.
 
 **A question about his day usually wants both.** "What is on my plate Thursday" is an
 agenda and a due list; answering with one and calling it the answer is the common
 failure here. Run both, and say which store each line came from only where it is not
 obvious.
 
-## Both stores read the same way
+## Commands
 
-Neither script uses EventKit or AppleScript. Each opens the live store `mode=ro`, takes
-an atomic SQLite backup into a private temp directory, reads the copy and deletes it on
-the way out. So neither races the app that owns the file, neither trips an Automation
-prompt, neither leaves anything on disk, and neither can write even with a bug in it -
-the source handle refuses writes at the SQLite level rather than by convention.
+```
+scripts/cal.py agenda [when]                 what is on            (default today)
+scripts/cal.py free [when] [--between HH:MM-HH:MM] [--min 30]
+scripts/cal.py conflicts [when]              overlapping commitments
+scripts/cal.py search <text> [--range when]  title, notes, location, attendees
+scripts/cal.py event <link or id>            one event in full
+scripts/cal.py calendars                     what exists, what is hidden
 
-That snapshot, the two timestamp conventions, the date vocabulary and config loading
-live once in `scripts/store.py`. Both CLIs are thin over it. Anything that knows a
-schema stays in the script that owns it, so a change to how a store is read safely is
-one edit rather than two that drift.
+scripts/rem.py due [when]           what is due, overdue on top   (default today)
+scripts/rem.py open [--undated]     everything open, grouped by list
+scripts/rem.py search <text>        title, notes, list, tag       (--done widens it)
+scripts/rem.py show <link or id>    one reminder in full
+scripts/rem.py done [when]          what was completed, and when  (default last 7 days)
+scripts/rem.py lists                lists and groups, marking hidden ones
+```
 
-`when` takes the same vocabulary on both: `today`, `tomorrow`, `yesterday`, `week`,
-`next-week`, `last-week`, `month`, `2026-10-03`, `2026-10-01..2026-10-07`, `+14d`,
-`-30d`, and mixed ranges like `today..+14d`. Flags work on either side of the
-subcommand, and `--json` and `--config PATH` exist on both.
+`when`: `today`, `tomorrow`, `yesterday`, `week`, `next-week`, `last-week`, `month`,
+`2026-10-03`, `2026-10-01..2026-10-07`, `+14d`, `-30d`, and mixed ranges like
+`today..+14d`. `rem.py` also takes `all`. Flags work on either side of the subcommand;
+`--json` and `--config PATH` exist on both.
 
-## Both stores share one trap
+- **Calendar**: `--calendar Skyro` (repeatable, substring), `--all` (drop the calendar
+  filter), `--show-free`, `--show-declined`, `--no-dedupe`. `event --open` reveals it in
+  Calendar.app - only when he asks, it steals focus.
+- **Reminders**: `--list Frontline` (repeatable, substring, matches groups too), `--all`
+  (drop the list filter), `--flat` (subtasks on their own lines), `--store PATH`.
+  `show --open` is best effort and steals focus - only when he asks.
 
-**Two timestamp conventions in the same column.** Every date in both stores is seconds
-from 2001-01-01, but a timed thing is a real UTC instant while an all-day thing is naive
-wall clock - the literal number for midnight on that date. Convert the second one to
-local time and you shift it by the UTC offset, landing it on the wrong day and always in
-the same direction.
-
-Both scripts already handle it. It matters here because it is the failure you would
-reintroduce the moment you query either store directly, and because it is silent - the
-answer is plausible, just a day out. Each reference says what its store does about it,
-and they differ: one has a cache of real instants to fall back on and the other has
-nothing.
+**Never query either store with your own SQL.** Both keep one thing two to five times
+over, and both mix real UTC instants with naive all-day dates in one column. The scripts
+correct both; hand-written SQL counts double and lands a day out. `references/calendar.md`
+and `references/reminders.md` hold the schema, the traps and the limits - read them to
+debug a result that looks wrong, to query a store directly anyway, or to change a script.
+An ordinary question does not need them.
 
 ## Reporting back
 
@@ -68,37 +65,53 @@ with them is his call, and he makes it faster from a list than from a recommenda
 whether the answer is the whole answer rather than about what to do with it. Both scripts
 print a staleness note when a store has not been written in over twelve hours - if the
 owning app has not run, something he changed on his phone an hour ago is simply not here
-yet. Each store has one of its own besides - the count of occurrences that came from rule expansion, and the
-count of open reminders carrying no due date. Pass all of them on as printed.
+yet. Calendar also counts the occurrences that came from rule expansion, and Reminders
+counts the open reminders with no due date. Pass all of them on as printed.
+
+## Settled before you see a row
+
+Do not reason about these, re-check them or narrate them:
+
+- **Free means free, declined means gone.** An event marked Free is hidden unless he
+  accepted it, and one he declined is dropped. `--show-free` answers a different
+  question - "what is happening at the zbor this week" - and is not a safety net.
+- **One meeting is one line.** Room and shared-calendar copies collapse into it, with
+  the extras shown as `+2`.
+- **All-day events do not block time** in `free`. They sit in the day's header as context.
+- **Subtasks hang under their parent**, and a subtask whose parent is outside the
+  selection is promoted. Completed reminders appear only in `done` and `search --done`,
+  marked as done.
+- **Reminder alarm times are not decoded**; location alarms are. Say so if he asks when
+  a reminder will ring.
 
 ## Looking one thing up
 
 Hand a pasted link straight to `cal.py event` or `rem.py show`. Both pull the id out of
-any link form, a raw UUID, or a foreign id, so there is no parsing to do first.
+any link form, a raw UUID or a foreign id, so there is no parsing to do first.
 
-**A single lookup deliberately ignores the filters** in both stores. He named this thing,
-so it shows whatever calendar or list it lives on and whatever its status is, including
-completed. A lookup is not an agenda and must not come back empty because of a hidden
-list or a free/busy flag.
+**A single lookup deliberately ignores the filters.** He named this thing, so it shows
+whatever calendar or list it lives on and whatever its status is, including completed.
+A lookup is not an agenda and must not come back empty because of a hidden list or a
+free/busy flag.
 
 ## What gets hidden
 
-Neither script has opinions of its own. Every judgement about what counts as noise lives
-in the config file beside it - `calendar.config.toml` and `reminders.config.toml` - which
-are the parts of this skill allowed to be personal. Each reference lists its keys.
+Neither script has opinions of its own. Every judgement about noise lives in
+`calendar.config.toml` and `reminders.config.toml`, the parts of this skill allowed to
+be personal; each reference lists the keys.
 
 **A filtered row is a decision he already made.** Do not run a second pass with the
 filters off to find what was hidden, do not list the hidden things as though they might
 really count, and do not caveat an answer with what is nominally sitting in it. The
-widening flags are for a different question, asked deliberately, not a safety net.
+widening flags are for a different question, asked deliberately.
 
 ## Writing
 
-There is none, by design, on either store. If he wants an event created or a reminder
-completed, say so and let him do it in the app or with Siri. A write path would need
-Automation access and could race the sync engine; on Reminders in particular, completing
-a recurring item is a server-side operation that materialises the next instance, and
-faking it in SQL would corrupt the series.
+None, by design, on either store. If he wants an event created or a reminder completed,
+say so and let him do it in the app or with Siri. A write path would need Automation
+access and could race the sync engine; completing a recurring reminder is a server-side
+operation that materialises the next instance, and faking it in SQL would corrupt the
+series.
 
 He has said a write path is likelier on Reminders than on Calendar. When it happens it
 goes through AppleScript or the `reminders` CLI as a separate command, never as SQL
