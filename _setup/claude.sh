@@ -10,10 +10,13 @@ set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # ~/.claude also holds sessions, projects and telemetry, so link the files we
-# own rather than the directory. CLAUDE.md is the one context file loaded in
-# every session regardless of where it starts, which is the whole point of it
-# living here rather than in any one project.
-link_file "$DOTFILES_DIR/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+# own rather than the directory. ~/.claude/CLAUDE.md is the one context file
+# loaded in every session regardless of where it starts, which is the whole
+# point of it living here rather than in any one project. Its source is not
+# named CLAUDE.md on purpose: Claude Code also loads any CLAUDE.md under the
+# working directory, so a session in this repo would read the file twice, the
+# second time as if it were this subtree's project instructions.
+link_file "$DOTFILES_DIR/claude/operator.md" "$HOME/.claude/CLAUDE.md"
 link_file "$DOTFILES_DIR/claude/statusline.sh" "$HOME/.claude/statusline.sh"
 
 # The plugin is discovered, not installed. Anything under ~/.claude/skills/<name>
