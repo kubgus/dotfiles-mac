@@ -661,7 +661,7 @@ def render_lines(accounts, rows, cursor, mode, width, height):
 
     lines.append("  %s%s%s" % (S.dim, detail_line(rows[account_key(accounts[cursor])]), S.reset))
     lines.append("")
-    lines.append("  %s↑↓ move · enter launch · tab mode · s sign in · r refresh · q quit%s" % (S.dim, S.reset))
+    lines.append("  %s↑↓ move · ←→ mode · enter launch · s sign in · r refresh · q quit%s" % (S.dim, S.reset))
     return [fit(line, width) for line in lines]
 
 
@@ -724,8 +724,8 @@ def pick(accounts, rows, start):
                 cursor = (cursor + 1) % len(accounts)
             elif key in ("\r", "\n"):
                 return ("launch", cursor, mode)
-            elif key in ("\t", "backtab"):
-                step = 1 if key == "\t" else -1
+            elif key in ("\t", "right", "l", "backtab", "left", "h"):
+                step = 1 if key in ("\t", "right", "l") else -1
                 mode = MODES[(MODES.index(mode) + step) % len(MODES)]
             elif key == "r":
                 # Stays in cbreak throughout: the fetch never reads stdin, and

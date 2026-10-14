@@ -114,8 +114,9 @@ the same event, which is why the settings copies had to go: two definitions
 meant every sound played twice.
 
 **Everything personal is opt-in per session.** A session starts clean: no
-`operator.md`, no `kubgus` plugin, no claude.ai connectors. Tab (Shift-Tab back)
-in the `claudeswitch` picker cycles the mode for that one launch:
+`operator.md`, no `kubgus` plugin, no claude.ai connectors. Tab, `→` or `l`
+(Shift-Tab, `←` or `h` back) in the `claudeswitch` picker cycles the mode for
+that one launch:
 
 - **clean** sets `ENABLE_CLAUDEAI_MCP_SERVERS=false` and nothing else.
 - **kubgus** adds `--plugin-dir claude/kubgus`, `--append-system-prompt-file
