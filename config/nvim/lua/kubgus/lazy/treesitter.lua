@@ -44,7 +44,13 @@ return {
         lazy = false, -- `main` does not support lazy-loading
         config = function()
             local treesitter = require("nvim-treesitter")
-            treesitter.install({ "vimdoc", "bash" })
+            -- Includes the languages other files embed, which the autocmd below
+            -- cannot see are missing
+            treesitter.install({
+                "vimdoc", "bash", "lua", "luadoc", "javascript", "jsdoc",
+                "typescript", "html", "css", "markdown", "markdown_inline",
+                "regex", "go", "python",
+            })
 
             vim.api.nvim_create_autocmd("FileType", {
                 group = vim.api.nvim_create_augroup("KubgusTreesitter", {}),
