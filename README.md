@@ -138,9 +138,9 @@ Three things follow from it:
   a clean session would name a style that does not exist. The flag sets it
   only when the plugin is there.
 - **`operator.md` goes into the system prompt, not `~/.claude/CLAUDE.md`.** A
-  plugin cannot carry a context file, and a `SessionStart` hook's
-  `additionalContext` is reported dropped for plugin hooks, so the flag is the
-  one route that travels with the mode.
+  plugin cannot carry a context file. A plugin `SessionStart` hook could print
+  it - caveman works that way - but the system prompt is the stronger slot and
+  needs no hook.
 - **Figma is an MCP server in the plugin, not the Figma plugin.** The plugin's
   skill descriptions cost more context than the server is worth in a clean
   session. It stays installed but disabled in `settings.json`.
