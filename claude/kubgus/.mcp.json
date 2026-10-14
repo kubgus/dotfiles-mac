@@ -13,10 +13,6 @@
       "type": "stdio",
       "command": "sh",
       "args": ["-c", "cd /tmp && exec node /Users/kubgus/Sources/playwright-mcp/cli.js --browser chromium --isolated"]
-    },
-    "figma": {
-      "type": "http",
-      "url": "https://mcp.figma.com/mcp"
     }
   }
 }

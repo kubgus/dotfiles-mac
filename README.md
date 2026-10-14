@@ -142,9 +142,10 @@ Three things follow from it:
   plugin cannot carry a context file. A plugin `SessionStart` hook could print
   it - caveman works that way - but the system prompt is the stronger slot and
   needs no hook.
-- **Figma is an MCP server in the plugin, not the Figma plugin.** The plugin's
-  skill descriptions cost more context than the server is worth in a clean
-  session. It stays installed but disabled in `settings.json`.
+- **Figma is off in every mode.** The Figma plugin stays installed but disabled
+  in `settings.json`; its skill descriptions and server cost context in sessions
+  that never touch a design. Enable it in `/plugin` for the work that needs it,
+  and disable it again after - that toggle is global, not per session.
 
 **The plugin is read in place, not installed.** `--plugin-dir` loads the
 directory as it is, so an edit here is live in the next session with no
