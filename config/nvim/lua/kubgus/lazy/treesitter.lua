@@ -48,7 +48,7 @@ return {
             -- cannot see are missing
             treesitter.install({
                 "vimdoc", "bash", "lua", "luadoc", "javascript", "jsdoc",
-                "typescript", "html", "css", "markdown", "markdown_inline",
+                "typescript", "tsx", "html", "css", "markdown", "markdown_inline",
                 "regex", "go", "python",
             })
 
