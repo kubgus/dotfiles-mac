@@ -114,11 +114,18 @@ the same event, which is why the settings copies had to go: two definitions
 meant every sound played twice.
 
 **Everything personal is opt-in per session.** A session starts clean: no
-`operator.md`, no `kubgus` plugin, no claude.ai connectors. Tab in the
-`claudeswitch` picker switches to kubgus mode, which adds three flags to that
-one launch - `--plugin-dir claude/kubgus`, `--append-system-prompt-file
-claude/operator.md` and `--settings` naming the output style - and leaves the
-connectors on. A clean launch sets `ENABLE_CLAUDEAI_MCP_SERVERS=false`.
+`operator.md`, no `kubgus` plugin, no claude.ai connectors. Tab (Shift-Tab back)
+in the `claudeswitch` picker cycles the mode for that one launch:
+
+- **clean** sets `ENABLE_CLAUDEAI_MCP_SERVERS=false` and nothing else.
+- **kubgus** adds `--plugin-dir claude/kubgus`, `--append-system-prompt-file
+  claude/operator.md` and `--settings` naming the output style, and leaves the
+  connectors on.
+- **caveman** is clean plus `--plugin-dir ~/Sources/caveman`, a clone of
+  [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) pinned by
+  hand like the MCP servers there. It is exclusive of kubgus because both
+  shape the reply. Its hooks write state to `~/.claude/.caveman-*` and read
+  `~/.config/caveman`, which `.gitignore` already leaves untracked.
 
 The reason is context cost. The operator context, the output style, every skill
 description and every connector's tool names ride in every turn of every

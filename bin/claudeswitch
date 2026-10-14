@@ -33,9 +33,10 @@ name goes stale, and it is a fallback that the live one overrides.
 script existed keeps working, and plain `claude` still uses it.
 
 A session starts clean: no kubgus plugin, no operator context, no claude.ai
-connectors. Tab in the picker switches to kubgus mode, which loads all three for
-that one session. Everything personal is opt-in per session because each piece
-costs context in every turn, and most sessions need none of it.
+connectors. Tab in the picker cycles the mode for that one session: kubgus loads
+all three, caveman loads only the caveman plugin from ~/Sources/caveman. Every
+plugin is opt-in per session because each piece costs context in every turn, and
+most sessions need none of it.
 
 Usage percentages come from the same endpoint the /usage command uses, but only
 when the account's stored access token is still valid; expired ones show the
@@ -76,6 +77,15 @@ KUBGUS_ARGS = [
     # session would ask for a style that does not exist.
     "--settings", json.dumps({"outputStyle": "kubgus:labeled"}),
 ]
+
+# A clone pinned by hand, like the MCP servers in ~/Sources, so an update is a choice.
+CAVEMAN_DIR = os.path.join(HOME, "Sources", "caveman")
+MODES = ("clean", "kubgus", "caveman")
+MODE_ARGS = {
+    "clean": [],
+    "kubgus": KUBGUS_ARGS,
+    "caveman": ["--plugin-dir", CAVEMAN_DIR],
+}
 
 USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 OAUTH_BETA = "oauth-2025-04-20"
@@ -161,8 +171,12 @@ class Style:
         self.green = code("\033[32m")
         self.yellow = code("\033[33m")
         self.red = code("\033[31m")
-        # Bold black on the accent colour: a filled badge, like OpenCode's agent switcher.
-        self.badge = code("\033[1;30;46m")
+        # Filled badges, one colour per mode, like OpenCode's agent switcher.
+        self.badges = {
+            "clean": code("\033[1;97;100m"),  # bright white on grey
+            "kubgus": code("\033[1;30;46m"),  # black on aqua
+            "caveman": code("\033[1;30;41m"),  # black on red
+        }
 
 
 def colour_wanted():
@@ -575,6 +589,7 @@ def detail_line(row):
 ARROW_KEYS = {
     b"[A": "up", b"[B": "down", b"[C": "right", b"[D": "left",
     b"OA": "up", b"OB": "down", b"OC": "right", b"OD": "left",
+    b"[Z": "backtab",
 }
 
 
@@ -598,19 +613,18 @@ CHROME_LINES = 5  # header + blank, then the detail line, a blank and the keys
 ACCOUNT_LINES = 3  # name, usage, blank
 
 
-def render_mode(is_kubgus):
-    """Both modes as tabs, the selected one a filled badge. Without colour, only the selected name."""
-    selected = "kubgus" if is_kubgus else "clean"
-    if not S.badge:
+def render_mode(selected):
+    """Every mode as a tab, the selected one a filled badge. Without colour, only the selected name."""
+    if not S.badges[selected]:
         return selected
     tabs = []
-    for mode in ("clean", "kubgus"):
-        style = S.badge if mode == selected else S.dim
+    for mode in MODES:
+        style = S.badges[mode] if mode == selected else S.dim
         tabs.append("%s %s %s" % (style, mode, S.reset))
     return "".join(tabs)
 
 
-def render_lines(accounts, rows, cursor, is_kubgus, width, height):
+def render_lines(accounts, rows, cursor, mode, width, height):
     """The picker as a list of lines, sized to fit the terminal it is drawn in.
 
     Windowed rather than truncated when the list is taller than the terminal,
@@ -627,7 +641,7 @@ def render_lines(accounts, rows, cursor, is_kubgus, width, height):
 
     counted = "" if shown == len(accounts) else " (%d of %d)" % (shown, len(accounts))
     lines = ["  %sClaude Code%s %s· pick an account%s%s  %s" % (
-        S.bold, S.reset, S.dim, counted or "", S.reset, render_mode(is_kubgus)), ""]
+        S.bold, S.reset, S.dim, counted or "", S.reset, render_mode(mode)), ""]
 
     # Emails vary in length, so size the column to what is actually there.
     name_width = min(34, max(14, max(len(rows[account_key(a)]["name"]) for a in visible)))
@@ -686,12 +700,12 @@ class Inline:
 
 
 def pick(accounts, rows, start):
-    """Draw the picker and return ("launch", index, is_kubgus), ("sign-in", index) or None."""
+    """Draw the picker and return ("launch", index, mode), ("sign-in", index) or None."""
     fd = sys.stdin.fileno()
     saved = termios.tcgetattr(fd)
     out = sys.stdout
     cursor = start
-    is_kubgus = False
+    mode = MODES[0]
     block = Inline(out)
     out.write("\033[?25l")
     try:
@@ -700,7 +714,7 @@ def pick(accounts, rows, start):
         tty.setcbreak(fd)
         while True:
             size = shutil.get_terminal_size((100, 24))
-            block.draw(render_lines(accounts, rows, cursor, is_kubgus, size.columns, size.lines))
+            block.draw(render_lines(accounts, rows, cursor, mode, size.columns, size.lines))
             key = read_key(fd)
             if key in ("q", "\x03", "\x04", "esc"):
                 return None
@@ -709,9 +723,10 @@ def pick(accounts, rows, start):
             elif key in ("down", "j"):
                 cursor = (cursor + 1) % len(accounts)
             elif key in ("\r", "\n"):
-                return ("launch", cursor, is_kubgus)
-            elif key == "\t":
-                is_kubgus = not is_kubgus
+                return ("launch", cursor, mode)
+            elif key in ("\t", "backtab"):
+                step = 1 if key == "\t" else -1
+                mode = MODES[(MODES.index(mode) + step) % len(MODES)]
             elif key == "r":
                 # Stays in cbreak throughout: the fetch never reads stdin, and
                 # restoring echo would let a keystroke land in the middle of the
@@ -722,7 +737,7 @@ def pick(accounts, rows, start):
             elif key == "s":
                 return ("sign-in", cursor)
             elif key.isdigit() and key != "0" and int(key) <= len(accounts):
-                return ("launch", int(key) - 1, is_kubgus)
+                return ("launch", int(key) - 1, mode)
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
         block.erase()
@@ -866,7 +881,7 @@ def claude_binary():
     die("claude is not on PATH")
 
 
-def account_env(account, name, is_kubgus=False):
+def account_env(account, name, mode="clean"):
     env = dict(os.environ)
     env.pop("CLAUDE_CONFIG_DIR", None)
     config_dir = account_dir(account)
@@ -874,18 +889,18 @@ def account_env(account, name, is_kubgus=False):
         env["CLAUDE_CONFIG_DIR"] = config_dir
     # Handy for statuslines and hooks that want to show which account is live.
     env["CLAUDE_PICK_ACCOUNT"] = name
-    if not is_kubgus:
+    if mode != "kubgus":
         env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
     return env
 
 
-def run_as(account, name, args, is_kubgus=False):
+def run_as(account, name, args, mode="clean"):
     """Run a command as an account and return its exit code.
 
     Ctrl-C belongs to the child: the parent just keeps waiting rather than
     tearing the session down from underneath it.
     """
-    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account, name, is_kubgus))
+    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account, name, mode))
     while True:
         try:
             return proc.wait()
@@ -909,7 +924,10 @@ def settle(account):
         sync_config_out(config_dir)
 
 
-def launch(account, name, args, is_kubgus=False):
+def launch(account, name, args, mode="clean"):
+    if mode == "caveman" and not os.path.isdir(CAVEMAN_DIR):
+        die("caveman mode needs a clone at %s - run: git clone "
+            "https://github.com/JuliusBrussee/caveman.git %s" % (CAVEMAN_DIR, CAVEMAN_DIR))
     # Nothing here is worth failing a launch over, so a broken sync is silent.
     try:
         adopt(account)
@@ -922,9 +940,7 @@ def launch(account, name, args, is_kubgus=False):
     except OSError:
         pass
 
-    if is_kubgus:
-        args = KUBGUS_ARGS + list(args)
-    code = run_as(account, name, args, is_kubgus)
+    code = run_as(account, name, MODE_ARGS[mode] + list(args), mode)
 
     try:
         settle(account)
@@ -1078,9 +1094,9 @@ def main(argv):
     if choice[0] == "sign-in":
         account = accounts[choice[1]]
         return sign_in(account, rows[account_key(account)]["name"])
-    _, index, is_kubgus = choice
+    _, index, mode = choice
     account = accounts[index]
-    return launch(account, rows[account_key(account)]["name"], argv, is_kubgus)
+    return launch(account, rows[account_key(account)]["name"], argv, mode)
 
 
 if __name__ == "__main__":
