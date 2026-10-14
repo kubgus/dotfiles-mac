@@ -121,6 +121,7 @@ export PATH=$PATH:$GOPATH/bin
 # Dotnet
 # -----------------------
 export DOTNET_ROOT="/opt/homebrew/opt/dotnet/libexec"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 # -----------------------
 # Ffmpeg full
