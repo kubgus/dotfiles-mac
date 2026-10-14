@@ -57,8 +57,7 @@ return {
                 callback = function(args)
                     local buf, ft = args.buf, args.match
                     local lang = vim.treesitter.language.get_lang(ft)
-                    -- Treesitter stays off for html
-                    if not lang or lang == "html" then
+                    if not lang then
                         return
                     end
 
