@@ -31,7 +31,7 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `_setup/` | One script per domain, plus `lib.sh`. |
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
-| `claude/` | Claude Code: the global context file (`operator.md`, linked as `~/.claude/CLAUDE.md`) and the status line. |
+| `claude/` | Claude Code: the operator context (`operator.md`) and the status line. |
 | `claude/kubgus/` | The `kubgus` plugin - output style, skills, hooks, MCP servers. |
 | `pi/` | Pi agent config. |
 | `zprofile` | Linked to `~/.zprofile`. |
@@ -42,7 +42,7 @@ Each is a script in `_setup/`, runnable on its own:
 
 - **`config`** - `~/.config`
 - **`shell`** - `~/.zprofile`, and everything in `bin/`
-- **`claude`** - Claude Code context file, status line, and the `kubgus` plugin
+- **`claude`** - Claude Code status line
 - **`pi`** - Pi agent config
 
 `_setup/lib.sh` holds `link_file`, the one helper every domain needs. A helper
@@ -108,27 +108,43 @@ chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
 ends. They sit in different frequency registers so they stay apart over music.
 `touch ~/.claude/mute` silences both; delete the file to bring them back. It is
 deliberately untracked - per-machine, per-mood state rather than configuration.
-They are plugin hooks now rather than `settings.json` hooks, so disabling the
-plugin takes the sounds with it. Plugin hooks and settings hooks both fire for
+They are plugin hooks now rather than `settings.json` hooks, so they play only
+in kubgus mode. Plugin hooks and settings hooks both fire for
 the same event, which is why the settings copies had to go: two definitions
 meant every sound played twice.
 
-**The plugin is discovered, not installed.** `_setup/claude.sh` links
-`claude/kubgus` to `~/.claude/skills/kubgus`, and anything under
-`~/.claude/skills/<name>` loads as `<name>@skills-dir`, read in place. That is
-what `claude plugin init` scaffolds, and it is what a plugin you edit rather
-than consume wants: an edit here is live in the next session with no install,
-no version bump and no cache.
+**Everything personal is opt-in per session.** A session starts clean: no
+`operator.md`, no `kubgus` plugin, no claude.ai connectors. Tab in the
+`claudeswitch` picker switches to kubgus mode, which adds three flags to that
+one launch - `--plugin-dir claude/kubgus`, `--append-system-prompt-file
+claude/operator.md` and `--settings` naming the output style - and leaves the
+connectors on. A clean launch sets `ENABLE_CLAUDEAI_MCP_SERVERS=false`.
 
-Installing it from a marketplace instead - which is the obvious-looking route -
-copies the plugin into `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`
-and then reads only that copy. `install` and `update` both no-op on an unchanged
-version, so edits stay invisible with no warning that they are being ignored.
-Neither problem exists on this route, because nothing installs.
+The reason is context cost. The operator context, the output style, every skill
+description and every connector's tool names ride in every turn of every
+session, and most sessions use none of them. Plain `claude`, outside
+`claudeswitch`, is clean too, except that it keeps the connectors.
 
-`bin/claudeswitch` already symlinks `~/.claude/skills` into every account
-directory, so the plugin reaches all of them without `claudeswitch` being
-taught about it.
+Three things follow from it:
+
+- **`outputStyle` is not in `settings.json`.** The style lives in the plugin, so
+  a clean session would name a style that does not exist. The flag sets it
+  only when the plugin is there.
+- **`operator.md` goes into the system prompt, not `~/.claude/CLAUDE.md`.** A
+  plugin cannot carry a context file, and a `SessionStart` hook's
+  `additionalContext` is reported dropped for plugin hooks, so the flag is the
+  one route that travels with the mode.
+- **Figma is an MCP server in the plugin, not the Figma plugin.** The plugin's
+  skill descriptions cost more context than the server is worth in a clean
+  session. It stays installed but disabled in `settings.json`.
+
+**The plugin is read in place, not installed.** `--plugin-dir` loads the
+directory as it is, so an edit here is live in the next session with no
+install, no version bump and no cache. Installing it from a marketplace
+instead - which is the obvious-looking route - copies the plugin into
+`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/` and then reads only
+that copy. `install` and `update` both no-op on an unchanged version, so edits
+stay invisible with no warning that they are being ignored.
 
 **Nothing is ever pruned.** Setup creates and repairs symlinks but never
 removes them. Delete something from `bin/` and its link in `~/Bin` is left

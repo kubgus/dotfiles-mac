@@ -32,6 +32,11 @@ name goes stale, and it is a fallback that the live one overrides.
 ~/.claude itself is the first account, so the login that was there before this
 script existed keeps working, and plain `claude` still uses it.
 
+A session starts clean: no kubgus plugin, no operator context, no claude.ai
+connectors. Tab in the picker switches to kubgus mode, which loads all three for
+that one session. Everything personal is opt-in per session because each piece
+costs context in every turn, and most sessions need none of it.
+
 Usage percentages come from the same endpoint the /usage command uses, but only
 when the account's stored access token is still valid; expired ones show the
 last figure seen, with its age. Refreshing a token would mean writing new
@@ -61,6 +66,16 @@ ROOT = os.environ.get("CLAUDE_PICK_HOME") or os.path.join(HOME, ".claude-account
 STATE_DIR = os.path.join(ROOT, ".state")
 USAGE_CACHE = os.path.join(STATE_DIR, "usage.json")
 LAST_FILE = os.path.join(STATE_DIR, "last")
+
+# The repo this script lives in, found through the ~/Bin symlink.
+DOTFILES_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+KUBGUS_ARGS = [
+    "--plugin-dir", os.path.join(DOTFILES_DIR, "claude", "kubgus"),
+    "--append-system-prompt-file", os.path.join(DOTFILES_DIR, "claude", "operator.md"),
+    # The style lives in the plugin, so settings.json cannot name it: a clean
+    # session would ask for a style that does not exist.
+    "--settings", json.dumps({"outputStyle": "kubgus:labeled"}),
+]
 
 USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 OAUTH_BETA = "oauth-2025-04-20"
@@ -581,7 +596,7 @@ CHROME_LINES = 5  # header + blank, then the detail line, a blank and the keys
 ACCOUNT_LINES = 3  # name, usage, blank
 
 
-def render_lines(accounts, rows, cursor, width, height):
+def render_lines(accounts, rows, cursor, is_kubgus, width, height):
     """The picker as a list of lines, sized to fit the terminal it is drawn in.
 
     Windowed rather than truncated when the list is taller than the terminal,
@@ -597,7 +612,9 @@ def render_lines(accounts, rows, cursor, width, height):
     visible = accounts[first:first + shown]
 
     counted = "" if shown == len(accounts) else " (%d of %d)" % (shown, len(accounts))
-    lines = ["  %sClaude Code%s %s· pick an account%s%s" % (S.bold, S.reset, S.dim, counted or "", S.reset), ""]
+    mode = "%skubgus%s" % (S.accent, S.reset) if is_kubgus else "%sclean%s" % (S.dim, S.reset)
+    lines = ["  %sClaude Code%s %s· pick an account%s%s · %s" % (
+        S.bold, S.reset, S.dim, counted or "", S.reset, mode), ""]
 
     # Emails vary in length, so size the column to what is actually there.
     name_width = min(34, max(14, max(len(rows[account_key(a)]["name"]) for a in visible)))
@@ -617,7 +634,7 @@ def render_lines(accounts, rows, cursor, width, height):
 
     lines.append("  %s%s%s" % (S.dim, detail_line(rows[account_key(accounts[cursor])]), S.reset))
     lines.append("")
-    lines.append("  %s↑↓ move · enter launch · s sign in · r refresh · q quit%s" % (S.dim, S.reset))
+    lines.append("  %s↑↓ move · enter launch · tab mode · s sign in · r refresh · q quit%s" % (S.dim, S.reset))
     return [fit(line, width) for line in lines]
 
 
@@ -656,11 +673,12 @@ class Inline:
 
 
 def pick(accounts, rows, start):
-    """Draw the picker and return the chosen index, or None if cancelled."""
+    """Draw the picker and return ("launch", index, is_kubgus), ("sign-in", index) or None."""
     fd = sys.stdin.fileno()
     saved = termios.tcgetattr(fd)
     out = sys.stdout
     cursor = start
+    is_kubgus = False
     block = Inline(out)
     out.write("\033[?25l")
     try:
@@ -669,7 +687,7 @@ def pick(accounts, rows, start):
         tty.setcbreak(fd)
         while True:
             size = shutil.get_terminal_size((100, 24))
-            block.draw(render_lines(accounts, rows, cursor, size.columns, size.lines))
+            block.draw(render_lines(accounts, rows, cursor, is_kubgus, size.columns, size.lines))
             key = read_key(fd)
             if key in ("q", "\x03", "\x04", "esc"):
                 return None
@@ -678,7 +696,9 @@ def pick(accounts, rows, start):
             elif key in ("down", "j"):
                 cursor = (cursor + 1) % len(accounts)
             elif key in ("\r", "\n"):
-                return cursor
+                return ("launch", cursor, is_kubgus)
+            elif key == "\t":
+                is_kubgus = not is_kubgus
             elif key == "r":
                 # Stays in cbreak throughout: the fetch never reads stdin, and
                 # restoring echo would let a keystroke land in the middle of the
@@ -689,7 +709,7 @@ def pick(accounts, rows, start):
             elif key == "s":
                 return ("sign-in", cursor)
             elif key.isdigit() and key != "0" and int(key) <= len(accounts):
-                return int(key) - 1
+                return ("launch", int(key) - 1, is_kubgus)
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
         block.erase()
@@ -833,7 +853,7 @@ def claude_binary():
     die("claude is not on PATH")
 
 
-def account_env(account, name):
+def account_env(account, name, is_kubgus=False):
     env = dict(os.environ)
     env.pop("CLAUDE_CONFIG_DIR", None)
     config_dir = account_dir(account)
@@ -841,16 +861,18 @@ def account_env(account, name):
         env["CLAUDE_CONFIG_DIR"] = config_dir
     # Handy for statuslines and hooks that want to show which account is live.
     env["CLAUDE_PICK_ACCOUNT"] = name
+    if not is_kubgus:
+        env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
     return env
 
 
-def run_as(account, name, args):
+def run_as(account, name, args, is_kubgus=False):
     """Run a command as an account and return its exit code.
 
     Ctrl-C belongs to the child: the parent just keeps waiting rather than
     tearing the session down from underneath it.
     """
-    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account, name))
+    proc = subprocess.Popen([claude_binary()] + list(args), env=account_env(account, name, is_kubgus))
     while True:
         try:
             return proc.wait()
@@ -874,7 +896,7 @@ def settle(account):
         sync_config_out(config_dir)
 
 
-def launch(account, name, args):
+def launch(account, name, args, is_kubgus=False):
     # Nothing here is worth failing a launch over, so a broken sync is silent.
     try:
         adopt(account)
@@ -887,7 +909,9 @@ def launch(account, name, args):
     except OSError:
         pass
 
-    code = run_as(account, name, args)
+    if is_kubgus:
+        args = KUBGUS_ARGS + list(args)
+    code = run_as(account, name, args, is_kubgus)
 
     try:
         settle(account)
@@ -1038,11 +1062,12 @@ def main(argv):
     choice = pick(accounts, rows, start)
     if choice is None:
         return 130
-    if isinstance(choice, tuple):
+    if choice[0] == "sign-in":
         account = accounts[choice[1]]
         return sign_in(account, rows[account_key(account)]["name"])
-    account = accounts[choice]
-    return launch(account, rows[account_key(account)]["name"], argv)
+    _, index, is_kubgus = choice
+    account = accounts[index]
+    return launch(account, rows[account_key(account)]["name"], argv, is_kubgus)
 
 
 if __name__ == "__main__":
