@@ -161,6 +161,8 @@ class Style:
         self.green = code("\033[32m")
         self.yellow = code("\033[33m")
         self.red = code("\033[31m")
+        # Bold black on the accent colour: a filled badge, like OpenCode's agent switcher.
+        self.badge = code("\033[1;30;46m")
 
 
 def colour_wanted():
@@ -596,6 +598,18 @@ CHROME_LINES = 5  # header + blank, then the detail line, a blank and the keys
 ACCOUNT_LINES = 3  # name, usage, blank
 
 
+def render_mode(is_kubgus):
+    """Both modes as tabs, the selected one a filled badge. Without colour, only the selected name."""
+    selected = "kubgus" if is_kubgus else "clean"
+    if not S.badge:
+        return selected
+    tabs = []
+    for mode in ("clean", "kubgus"):
+        style = S.badge if mode == selected else S.dim
+        tabs.append("%s %s %s" % (style, mode, S.reset))
+    return "".join(tabs)
+
+
 def render_lines(accounts, rows, cursor, is_kubgus, width, height):
     """The picker as a list of lines, sized to fit the terminal it is drawn in.
 
@@ -612,9 +626,8 @@ def render_lines(accounts, rows, cursor, is_kubgus, width, height):
     visible = accounts[first:first + shown]
 
     counted = "" if shown == len(accounts) else " (%d of %d)" % (shown, len(accounts))
-    mode = "%skubgus%s" % (S.accent, S.reset) if is_kubgus else "%sclean%s" % (S.dim, S.reset)
-    lines = ["  %sClaude Code%s %s· pick an account%s%s · %s" % (
-        S.bold, S.reset, S.dim, counted or "", S.reset, mode), ""]
+    lines = ["  %sClaude Code%s %s· pick an account%s%s  %s" % (
+        S.bold, S.reset, S.dim, counted or "", S.reset, render_mode(is_kubgus)), ""]
 
     # Emails vary in length, so size the column to what is actually there.
     name_width = min(34, max(14, max(len(rows[account_key(a)]["name"]) for a in visible)))
