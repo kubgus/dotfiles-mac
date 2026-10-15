@@ -58,6 +58,11 @@ return {
         sort = {
             sorter = "case_sensitive",
         },
+        notify = {
+            -- Info notices (copy, cut, create, rename) stop for a press-enter
+            -- prompt; the tree itself shows the result. Warnings and errors stay.
+            threshold = vim.log.levels.WARN,
+        },
         view = {
             width = 48,
             float = { -- open the tree as a floating window
