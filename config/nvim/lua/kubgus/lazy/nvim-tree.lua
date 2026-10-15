@@ -31,6 +31,29 @@ return {
                     desc = "Copy Claude reference to this node",
                 })
             end
+
+            -- `a` with the epoch time typed in, so the new name sorts by
+            -- creation and cannot collide - prompts, migrations. nvim-tree
+            -- takes no default for its prompt, so the one vim.ui.input call
+            -- it makes is wrapped, and the original put back whatever happens.
+            local function create_with_epoch()
+                local input = vim.ui.input
+                vim.ui.input = function(input_opts, on_confirm)
+                    vim.ui.input = input
+                    input_opts.default = input_opts.default .. os.time()
+                    input(input_opts, on_confirm)
+                end
+                local ok, err = pcall(api.fs.create)
+                vim.ui.input = input
+                if not ok then
+                    error(err, 0)
+                end
+            end
+
+            vim.keymap.set("n", "A", create_with_epoch, {
+                buffer = bufnr,
+                desc = "Create file or directory with an epoch prefix",
+            })
         end,
         sort = {
             sorter = "case_sensitive",
