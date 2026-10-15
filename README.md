@@ -113,9 +113,9 @@ in kubgus mode. Plugin hooks and settings hooks both fire for
 the same event, which is why the settings copies had to go: two definitions
 meant every sound played twice.
 
-**Everything personal is opt-in per session.** A session starts clean: no
-`operator.md`, no `kubgus` plugin, no claude.ai connectors. Tab, `→` or `l`
-(Shift-Tab, `←` or `h` back) in the `claudeswitch` picker cycles the mode for
+**Everything personal is chosen per session.** A `claudeswitch` session starts
+in kubgus mode: `operator.md`, the `kubgus` plugin and the claude.ai connectors.
+Tab, `→` or `l` (Shift-Tab, `←` or `h` back) in the picker cycles the mode for
 that one launch:
 
 - **clean** sets `ENABLE_CLAUDEAI_MCP_SERVERS=false` and nothing else.
@@ -130,8 +130,9 @@ that one launch:
 
 The reason is context cost. The operator context, the output style, every skill
 description and every connector's tool names ride in every turn of every
-session, and most sessions use none of them. Plain `claude`, outside
-`claudeswitch`, is clean too, except that it keeps the connectors.
+session, so a session that needs none of them starts clean or caveman instead.
+kubgus is the default because most sessions are his own work. Plain `claude`,
+outside `claudeswitch`, is clean, except that it keeps the connectors.
 
 Three things follow from it:
 

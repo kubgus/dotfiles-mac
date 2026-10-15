@@ -32,11 +32,11 @@ name goes stale, and it is a fallback that the live one overrides.
 ~/.claude itself is the first account, so the login that was there before this
 script existed keeps working, and plain `claude` still uses it.
 
-A session starts clean: no kubgus plugin, no operator context, no claude.ai
-connectors. Tab in the picker cycles the mode for that one session: kubgus loads
-all three, caveman loads only the caveman plugin from ~/Sources/caveman. Every
-plugin is opt-in per session because each piece costs context in every turn, and
-most sessions need none of it.
+A session starts in kubgus mode: the kubgus plugin, the operator context and the
+claude.ai connectors. Tab in the picker cycles the mode for that one session:
+clean drops all three, caveman loads only the caveman plugin from
+~/Sources/caveman. Each piece costs context in every turn, so a session that
+needs none of it can still start without it.
 
 Usage percentages come from the same endpoint the /usage command uses, but only
 when the account's stored access token is still valid; expired ones show the
@@ -81,6 +81,7 @@ KUBGUS_ARGS = [
 # A clone pinned by hand, like the MCP servers in ~/Sources, so an update is a choice.
 CAVEMAN_DIR = os.path.join(HOME, "Sources", "caveman")
 MODES = ("clean", "kubgus", "caveman")
+DEFAULT_MODE = "kubgus"
 MODE_ARGS = {
     "clean": [],
     "kubgus": KUBGUS_ARGS,
@@ -705,7 +706,7 @@ def pick(accounts, rows, start):
     saved = termios.tcgetattr(fd)
     out = sys.stdout
     cursor = start
-    mode = MODES[0]
+    mode = DEFAULT_MODE
     block = Inline(out)
     out.write("\033[?25l")
     try:
@@ -1076,7 +1077,7 @@ def main(argv):
         return 0
 
     if len(accounts) == 1:
-        return launch(accounts[0], display_name(accounts[0], identity(accounts[0])), argv)
+        return launch(accounts[0], display_name(accounts[0], identity(accounts[0])), argv, DEFAULT_MODE)
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
         die("no terminal to draw the picker in; try: %s list" % PROG)
 
