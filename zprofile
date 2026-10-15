@@ -20,9 +20,10 @@ alias ..="cd .."
 alias grep="grep --color=auto"
 
 # -----------------------
-# Automatically apply zprofile changes
+# Shortcuts
 # -----------------------
 alias editzprofile="$EDITOR ~/.zprofile && source ~/.zprofile"
+alias ip="ipconfig getifaddr en0"
 
 # -----------------------
 # Secure npm, npx, pnpm, yarn
@@ -31,7 +32,6 @@ alias npm="socket npm"
 alias npx="socket npx"
 alias pnpm="socket pnpm"
 alias yarn="socket yarn"
-
 
 # -----------------------
 # Claude shortcuts
