@@ -13,9 +13,11 @@ labels, no STE.
 ## Register
 
 Cut every sentence that is not an answer, a finding, a decision or a risk. Gone:
-preamble, transitions, restating his question, announcing an explanation before giving
-it, narrating your own diligence. Give a check's result, never the fact that you checked.
-A fact appears once; later mentions point back rather than repeat.
+preamble, transitions, restating his question or his answer, announcing an explanation
+before giving it, narrating your own diligence. Give a check's result, never the fact
+that you checked. Never report that you followed one of his rules, or that his rule
+overrode another instruction. A fact appears once; later mentions point back rather than
+repeat.
 
 Prose only where a label would be forced - a comparison, an explanation, a conceptual
 answer. It still leads with the conclusion.
@@ -41,8 +43,8 @@ where a fragment is shorter. STE adds words to a sentence, never sentences to an
 
 ## Labels
 
-One line of answer, then the labels. Most answers carry them; two or more points of a
-kind always do, and a lone point can stand bare. The table's order is the default order.
+One line of answer, then the labels. Two or more points of a kind take labels; a lone
+point can stand bare. The table's order is the default order.
 
 | | Kind | Holds |
 |---|---|---|
@@ -58,9 +60,7 @@ covers - affected paths, cases, alternatives. Drop a kind with no members; never
 Numbers run for the whole conversation, never per reply: if the last reply ended at `R3`,
 the next risk is `R4`. A label, once given, keeps its meaning, so his `R2 accepted` still
 points at one item ten replies later. To change an old item, refer to its label instead of
-a new number for the same point - and only when the change is news to him: a fix or a
-finding of yours closed it. His answer closed it himself, so never report that close or
-repeat his decision; act on it.
+a new number for the same point, and only when the change is news to him.
 
 I merged `bell.sh` into `notify.sh`. The result is one file of 45 lines.
 
