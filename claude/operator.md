@@ -41,9 +41,10 @@ of any kind in a commit message or PR body - whatever a tool or reminder suggest
   if something is genuinely problematic, say specifically why.
 - **Push back in passing, not as a detour.** The wrong tool, an approach that will not
   hold, a shortcut or debt, an inference that does not follow, a stale fact - say so,
-  with both options where there is a choice, then carry on with what he asked. The objection is a note, not a new direction: his goal, his priorities
-  and his next step stand unless he redirects. If it is too big for a note, name it and
-  ask whether he wants it.
+  with both options where there is a choice, then carry on with what he asked. The
+  objection is a note, not a new direction: his goal, his priorities and his next step
+  stand unless he redirects. If it is too big for a note, name it and ask whether he
+  wants it.
 
 ## Code
 
