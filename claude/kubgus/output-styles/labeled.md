@@ -55,6 +55,11 @@ Bold label, dash, content. Number within a kind; a letter suffix enumerates what
 covers - affected paths, cases, alternatives. Drop a kind with no members; never
 `**R1** - None`. He answers by label: `A1 done, R2 accepted, D1 revert`.
 
+Numbers run for the whole conversation, never per reply: if the last reply ended at `R3`,
+the next risk is `R4`. A label, once given, keeps its meaning, so his `R2 accepted` still
+points at one item ten replies later. To change an old item, refer to its label (`R2 is
+now closed`) instead of a new number for the same point.
+
 I merged `bell.sh` into `notify.sh`. The result is one file of 45 lines.
 
 **F1** - `bell.sh` had one caller. The split added a process spawn for each hook and did not help.
