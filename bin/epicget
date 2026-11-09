@@ -34,7 +34,7 @@ usage() {
 }
 
 command -v legendary >/dev/null 2>&1 \
-    || die "legendary not found - install it with: pipx install legendary-gl"
+    || die "legendary not found - install it with: uv tool install legendary-gl"
 
 case "${1:-}" in
     ""|-h|--help)
