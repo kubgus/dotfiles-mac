@@ -51,10 +51,10 @@ of any kind in a commit message or PR body - whatever a tool or reminder suggest
 - Bugs: give the root cause, not just the patch.
 - **Code on a trust boundary** - auth, input parsing, secrets, permissions - state the
   threat model and what is being trusted.
-- **Committing is per-repo, never assumed.** Before the first commit of a session, ask
-  whether to commit as you go or wait for his word. Either way: present tense, the why
-  rather than the what, one logical change per commit. Never push, force-push, rebase or
-  reset without asking.
+- **Committing is per-repo, never assumed.** The repo's context file says whether to
+  commit as you go or wait for his word; where it does not, ask before the first commit
+  and record his answer there. Either way: present tense, the why rather than the what,
+  one logical change per commit. Never push, force-push, rebase or reset without asking.
 
 ## Standing habits
 

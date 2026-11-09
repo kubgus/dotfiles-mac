@@ -16,7 +16,7 @@ read it before changing the layout, a setup domain or how the plugin loads.
 - **Setup**: `./_setup.sh <domain>`. Silence means nothing changed. After moving or
   renaming a linked file, run its domain so the link follows - setup never prunes.
 - **Shell**: `shellcheck`-clean, checked with the command in the README.
-- **Commits**: `type(scope): summary` - lowercase, present tense, scope the top-level
-  area (`claude`, `bin`, `config`, `shell`). The body says why.
+- **Commits**: commit as you go. `type(scope): summary` - lowercase, present tense,
+  scope the top-level area (`claude`, `bin`, `config`, `shell`). The body says why.
 - **The README is part of the change.** Layout, a new domain or a new non-obvious reason
   goes into it in the same commit.
