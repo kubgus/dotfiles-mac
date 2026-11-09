@@ -11,3 +11,6 @@ config/*
 
 # left behind by importing bin/claudeswitch, and bin/* is linked wholesale
 __pycache__/
+
+# browser logs and snapshots the playwright MCP writes to the session directory
+.playwright-mcp/
