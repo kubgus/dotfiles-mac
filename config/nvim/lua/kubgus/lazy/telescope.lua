@@ -31,9 +31,25 @@ return {
                 -- telescope has no flag for --no-ignore-vcs, so the command is
                 -- spelled out. It has to be a function: telescope appends
                 -- --hidden to the table it is handed, and would append again on
-                -- every subsequent call to a shared one.
+                -- every subsequent call to a shared one. Dropping .gitignore
+                -- lets dependencies, caches and build output back in, so they
+                -- are excluded by name; rg prunes a directory instead of
+                -- filtering its files after.
                 find_command = function()
-                    return { "rg", "--files", "--color", "never", "--no-ignore-vcs", "--glob=!**/.git/*" }
+                    local cmd = { "rg", "--files", "--color", "never", "--no-ignore-vcs" }
+                    for _, name in ipairs({
+                        ".git/*",
+                        ".DS_Store",
+                        -- JS, Nuxt, Astro
+                        "node_modules/", ".nuxt/", ".output/", ".astro/", "dist/",
+                        ".turbo/", ".cache/", "coverage/",
+                        -- Python
+                        ".venv/", "__pycache__/", ".mypy_cache/", ".pytest_cache/",
+                        ".ruff_cache/",
+                    }) do
+                        table.insert(cmd, "--glob=!**/" .. name)
+                    end
+                    return cmd
                 end,
             },
         },
