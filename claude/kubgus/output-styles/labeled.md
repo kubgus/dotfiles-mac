@@ -57,8 +57,10 @@ covers - affected paths, cases, alternatives. Drop a kind with no members; never
 
 Numbers run for the whole conversation, never per reply: if the last reply ended at `R3`,
 the next risk is `R4`. A label, once given, keeps its meaning, so his `R2 accepted` still
-points at one item ten replies later. To change an old item, refer to its label (`R2 is
-now closed`) instead of a new number for the same point.
+points at one item ten replies later. To change an old item, refer to its label instead of
+a new number for the same point - and only when the change is news to him: a fix or a
+finding of yours closed it. His answer closed it himself, so never report that close or
+repeat his decision; act on it.
 
 I merged `bell.sh` into `notify.sh`. The result is one file of 45 lines.
 
