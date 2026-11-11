@@ -174,14 +174,16 @@ Shell scripts here should be `shellcheck`-clean, and start with
 `set -euo pipefail` unless there is a reason not to. Check them with:
 
 ```bash
-shellcheck -x -e SC1071 _setup.sh _setup/*.sh claude/*.sh \
-    claude/kubgus/hooks-handlers/*.sh bin/*
+shellcheck -x _setup.sh _setup/*.sh claude/*.sh \
+    claude/kubgus/hooks-handlers/*.sh $(grep -l '^#!/bin/' bin/*)
 ```
 
 `bin/claudeswitch` is Python rather than shell - it needs JSON, HTTPS, Unicode
 normalisation and a handful of concurrent requests, which is more than shell
-should be asked to carry. `-e SC1071` is what stops `shellcheck` complaining
-about its shebang.
+should be asked to carry. `bin/search` is Python too, run through `uv`: it stops
+its walk at every git repository, and `find` can only learn that a directory
+holds `.git` by starting a process per directory. The `grep` picks the shell
+scripts out of `bin/`, so neither reaches `shellcheck`.
 
 ## Keeping this current
 

@@ -1,210 +1,161 @@
-#!/bin/bash
-# Jump to a directory you marked earlier, from anywhere above it.
-#
-# A directory becomes a destination once it holds a .search_marker file, so the
-# list you pick from is the one you built on purpose rather than every folder
-# in the tree. `search --add` places a marker; `search` picks one below the
-# working directory with fzf and prints it.
-#
-# Printing is all this can do: a script on PATH runs in its own process and
-# cannot move the shell that called it. The `search` function in zprofile is
-# what turns the printed path into a cd, and this file is the half of it that
-# can be read and shellchecked on its own.
-#
-# So stdout carries the chosen directory and nothing else - usage, and the
-# confirmation from --add, go to stderr - and that function can take the whole
-# of stdout without having to tell a path from chatter.
-set -euo pipefail
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# ///
+"""search - jump to a directory you marked earlier, from anywhere above it.
 
-MARKER=".search_marker"
+A directory becomes a destination once it holds a .search_marker file, so the
+list you pick from is the one you built on purpose rather than every folder
+in the tree. `search --add` places a marker; `search` picks one below the
+working directory with fzf and prints it.
 
-# Directory names never to walk into: colon-separated globs, matched against a
-# directory's own name the way find's -name matches it. SEARCH_IGNORE replaces
-# this outright rather than adding to it, so what you set is the whole list,
-# and setting it empty walks everything.
-IGNORE="${SEARCH_IGNORE-node_modules:.*}"
+Printing is all this can do: a script on PATH runs in its own process and
+cannot move the shell that called it. The `search` function in zprofile is
+what turns the printed path into a cd.
 
-prog="${0##*/}"
+So stdout carries the chosen directory and nothing else - usage, and the
+confirmation from --add, go to stderr - and that function can take the whole
+of stdout without having to tell a path from chatter.
 
-die() {
-    echo "$prog: $1" >&2
-    exit 1
-}
+The walk stops at a git repository: a marker at the repository's root is
+offered, but nothing inside it is walked, which keeps node_modules, build
+output and vendored trees out of the walk without a list of names to skip.
+The directory the walk starts from is the exception, so search still works
+from inside a repository.
 
-usage() {
-    echo "usage: $prog [-d depth] [dir]"
-    echo "       $prog -a | --add [dir]"
-    echo
-    echo "  -d, --depth N  look no more than N levels below dir (default: all)"
-    echo "  -a, --add      mark dir as a destination and exit (default: .)"
-    echo "  -h, --help     show this"
-    echo
-    echo "With no flag, pick a marked directory below dir (default: .) and"
-    echo "print it. Exits 1 when nothing below dir is marked."
-    echo
-    echo "SEARCH_IGNORE holds colon-separated globs of directory names not to"
-    echo "walk into, and replaces rather than extends the default:"
-    echo "  node_modules:.*"
-}
+This is Python rather than shell because of that stop. find can only test the
+entry it is on, so knowing that a directory holds .git costs a process per
+directory - minutes over a home directory - and a walker in bash is about ten
+times slower than this one.
+"""
 
-ignore_names=()
-if [ -n "$IGNORE" ]; then
-    # An empty field - a stray or doubled colon - would become -name '' and
-    # match nothing, so they are dropped rather than passed on to find.
-    while [ -n "$IGNORE" ]; do
-        field="${IGNORE%%:*}"
-        [ -z "$field" ] || ignore_names+=("$field")
-        case "$IGNORE" in
-            *:*) IGNORE="${IGNORE#*:}" ;;
-            *) IGNORE="" ;;
-        esac
-    done
-fi
+import contextlib
+import itertools
+import os
+import shutil
+import subprocess
+import sys
 
-# True when a single directory name is one of the ignored globs.
-ignored_name() {
-    local name="$1" pattern
-    [ ${#ignore_names[@]} -gt 0 ] || return 1
-    for pattern in "${ignore_names[@]}"; do
-        # Unquoted on purpose: the entry is a glob and has to match as one,
-        # exactly as find's -name would treat it.
-        # shellcheck disable=SC2254
-        case "$name" in
-            $pattern) return 0 ;;
-        esac
-    done
-    return 1
-}
+MARKER = ".search_marker"
+DEPTH = 10  # levels below the starting directory, which is level 0
 
-add_marker() {
-    local target="$1" abs rest component
-    [ -d "$target" ] || die "not a directory: $target"
+PROG = os.path.basename(sys.argv[0]) or "search"
 
-    abs="$(cd -P "$target" && pwd)"
 
-    # search never descends into an ignored directory, so a marker anywhere
-    # beneath one is a destination that can never be picked. Refuse to write a
-    # marker that would not work rather than leave one that silently does not.
-    rest="$abs"
-    while [ -n "$rest" ] && [ "$rest" != "/" ]; do
-        component="${rest##*/}"
-        if ignored_name "$component"; then
-            die "'$component' is ignored, so a marker under it would never be found - set SEARCH_IGNORE to search it"
-        fi
-        rest="${rest%/*}"
-    done
+def die(message):
+    print(f"{PROG}: {message}", file=sys.stderr)
+    raise SystemExit(1)
 
-    if [ -e "$target/$MARKER" ]; then
-        exit 0
-    fi
-    : > "$target/$MARKER"
-    echo "Marked $target" >&2
-}
 
-case "${1:-}" in
-    -h|--help)
-        usage >&2
-        exit 0
-        ;;
-    -a|--add)
-        shift
-        add_marker "${1:-.}"
-        exit 0
-        ;;
-esac
+def usage():
+    print(f"""usage: {PROG} [dir]
+       {PROG} -a | --add [dir]
 
-# Give the user instant feedback on what is happening, rather than a long pause before the
-# picker appears. The find is still running, but fzf draws as input arrives.
-printf "Searching...\r" >&2
+  -a, --add   mark dir as a destination and exit (default: .)
+  -h, --help  show this
 
-# Empty means no limit: the whole tree below the root is walked. That is a
-# couple of seconds over a home directory, which streaming into fzf hides -
-# the picker is up and filling the whole time. --depth is for when it does not
-# hide it, and cuts a home directory to well under a second.
-depth=""
-root="."
-root_given=""
+With no flag, pick a marked directory below dir (default: .) and print
+it. The walk goes at most {DEPTH} levels down and does not enter a git
+repository below dir, though a marker at its root is still offered.
+Exits 1 when nothing below dir is marked.""", file=sys.stderr)
 
-while [ $# -gt 0 ]; do
-    case "$1" in
-        -d|--depth)
-            [ $# -ge 2 ] || die "$1 needs a number"
-            depth="$2"
-            shift 2
-            ;;
-        -*)
-            die "unknown flag: $1"
-            ;;
-        *)
-            [ -z "$root_given" ] || die "only one directory, got '$root' and '$1'"
-            root="$1"
-            root_given=yes
-            shift
-            ;;
-    esac
-done
 
-if [ -n "$depth" ]; then
-    case "$depth" in
-        *[!0-9]*) die "depth must be a whole number, got '$depth'" ;;
-    esac
-fi
+def add_marker(target):
+    if not os.path.isdir(target):
+        die(f"not a directory: {target}")
+    path = os.path.join(target, MARKER)
+    if os.path.exists(path):
+        return
+    open(path, "a").close()
+    print(f"Marked {target}", file=sys.stderr)
 
-[ -d "$root" ] || die "not a directory: $root"
 
-command -v fzf >/dev/null 2>&1 \
-    || die "fzf not found - install it with: brew install fzf"
+def find_marked(directory, levels_left, is_start=False):
+    """Yield each marked directory at or below directory, as it is found."""
+    try:
+        with os.scandir(directory) as it:
+            entries = {entry.name: entry for entry in it}
+    except OSError:
+        # An unreadable directory is no reason to fail a pick.
+        return
+    if MARKER in entries:
+        yield directory
+    if levels_left == 0 or (".git" in entries and not is_start):
+        return
+    for entry in entries.values():
+        if entry.is_dir(follow_symlinks=False):
+            yield from find_marked(entry.path, levels_left - 1)
 
-# -mindepth 1 keeps the root out of the ignore test. Without it a root of '.'
-# matches the '.*' glob, gets pruned before the walk starts, and search finds
-# nothing wherever you run it.
-find_args=("$root" -mindepth 1)
 
-# -maxdepth counts the marker file, which sits one level below the directory
-# being offered, so a --depth of 5 has to let find reach 6.
-[ -z "$depth" ] || find_args+=(-maxdepth "$((depth + 1))")
+def display(path):
+    return path[2:] if path.startswith("./") else path
 
-if [ ${#ignore_names[@]} -gt 0 ]; then
-    prune_expr=()
-    for name in "${ignore_names[@]}"; do
-        [ ${#prune_expr[@]} -eq 0 ] || prune_expr+=(-o)
-        prune_expr+=(-name "$name")
-    done
-    find_args+=(-type d "(" "${prune_expr[@]}" ")" -prune -o)
-fi
 
-find_args+=(-type f -name "$MARKER" -print)
+def pick(root):
+    marked = find_marked(root, DEPTH, is_start=True)
 
-# fzf draws as input arrives, so the walk streams into it rather than being
-# collected first: on a large tree the picker is up and usable while find is
-# still running, which is most of what made this feel slow.
-#
-# Reading one line before handing the rest over is what keeps an empty tree
-# distinguishable from a pick that matched nothing - fzf leaves with 1 either
-# way. 3 is not a status fzf uses, so it can mean "nothing was marked".
-#
-# find's own status is dropped because an unreadable subdirectory is no reason
-# to fail a pick, and pipefail would otherwise make it one.
-status=0
-selected="$(
-    { find "${find_args[@]}" 2>/dev/null || true; } \
-        | sed -e "s#/$MARKER\$##" -e 's#^\./##' \
-        | {
-            IFS= read -r first || exit 3
-            { printf '%s\n' "$first"; cat; } \
-                | fzf --height=40% --reverse --prompt='Search > '
-        }
-)" || status=$?
+    # Taking the first match before fzf starts is what keeps an empty tree
+    # distinguishable from a pick that matched nothing - fzf leaves with 1
+    # either way.
+    first = next(marked, None)
+    if first is None:
+        die(f"nothing marked within {DEPTH} levels of {root} - mark a directory with: {PROG} --add")
 
-case "$status" in
-    0) ;;
-    3)
-        if [ -n "$depth" ]; then
-            die "nothing marked within $depth levels of $root - mark a directory with: $prog --add"
-        fi
-        die "nothing marked below $root - mark a directory with: $prog --add"
-        ;;
-    *) exit "$status" ;;
-esac
+    # fzf draws as input arrives, so the walk streams into it rather than being
+    # collected first: the picker is up and usable while the walk goes on.
+    fzf = subprocess.Popen(
+        ["fzf", "--height=40%", "--reverse", "--prompt=Search > "],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    # A broken pipe means fzf left before the walk finished: the pick is made,
+    # and the rest of the walk is not needed.
+    with contextlib.suppress(BrokenPipeError):
+        for path in itertools.chain([first], marked):
+            fzf.stdin.write(display(path) + "\n")
+            fzf.stdin.flush()
+    with contextlib.suppress(BrokenPipeError):
+        fzf.stdin.close()
 
-printf '%s\n' "$selected"
+    selected = fzf.stdout.read()
+    status = fzf.wait()
+    if status != 0:
+        return status
+    sys.stdout.write(selected)
+    return 0
+
+
+def main(args):
+    if args and args[0] in ("-h", "--help"):
+        usage()
+        return 0
+    if args and args[0] in ("-a", "--add"):
+        add_marker(args[1] if len(args) > 1 else ".")
+        return 0
+
+    root = None
+    for arg in args:
+        if arg.startswith("-"):
+            die(f"unknown flag: {arg}")
+        if root is not None:
+            die(f"only one directory, got '{root}' and '{arg}'")
+        root = arg
+    if root is None:
+        root = "."
+
+    if not os.path.isdir(root):
+        die(f"not a directory: {root}")
+    if shutil.which("fzf") is None:
+        die("fzf not found - install it with: brew install fzf")
+
+    # Instant feedback, rather than a pause before the picker appears.
+    print("Searching...", end="\r", file=sys.stderr, flush=True)
+    return pick(root)
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        raise SystemExit(130)
