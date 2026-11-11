@@ -1,5 +1,5 @@
-**/.claude/settings.local.json
+.DS_Store
 
-# bin/search writes these to mark a directory worth jumping to. They belong to
-# this machine, not to whatever repo one happens to land in.
 .search_marker
+
+**/.claude/settings.local.json
