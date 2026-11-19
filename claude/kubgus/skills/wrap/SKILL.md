@@ -1,4 +1,5 @@
 ---
+argument-hint: "[details]"
 disable-model-invocation: true
 ---
 
