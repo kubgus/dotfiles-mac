@@ -1,10 +1,5 @@
 {
-  "lastChangelogVersion": "0.84.2",
+  "lastChangelogVersion": "1.5.1",
   "theme": "dark",
-  "enableInstallTelemetry": false,
-  "defaultProvider": "lm-studio",
-  "defaultModel": "qwen/qwen3.5-9b",
-  "packages": [
-    "npm:pi-web-access"
-  ]
+  "enableInstallTelemetry": false
 }
