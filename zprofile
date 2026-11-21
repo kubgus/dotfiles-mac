@@ -24,6 +24,7 @@ alias grep="grep --color=auto"
 # -----------------------
 alias editzprofile="$EDITOR ~/.zprofile && source ~/.zprofile"
 alias ip="ipconfig getifaddr en0"
+alias linesofcode="tokei --exclude target --exclude node_modules --exclude .git --exclude .next --exclude .vercel --exclude .cache --exclude dist"
 
 # -----------------------
 # Secure npm, npx, pnpm, yarn
