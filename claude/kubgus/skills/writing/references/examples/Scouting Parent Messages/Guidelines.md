@@ -8,6 +8,11 @@ Parent-facing communication for the troop ([ZBOR], [ODDIEL]). Two sub-genres liv
 ## Register
 
 - **Slovak, vykanie to parents** ("vám", "veríme", "ďakujeme"). Warm and respectful, never stiff or bureaucratic.
+- **Informal exception: mirror a parent who writes informally.** A parent who opens with
+  `Ahoj`, tykanie or `so skautským pozdravom` - usually a scout themselves - gets `Ahoj`,
+  tykanie and his own voice in the singular. In that register his colloquial grammar
+  (`keby sa otvorí`, `môžme`) is a quirk to keep, not a slip to fix. See
+  `Enrollment - Informal No-Slot Reply.md`.
 - **Signed by the collective** ("-Oddielová rada") for official troop decisions, not by an individual leader - it's the troop council speaking, and it shields any one leader from being the face of an unpopular call.
 - **Capitalize `Vy` by addressee, not by formality.** A WhatsApp message to the whole group is
   many people: lowercase `vám`, `vás`, `vaša`. An email to one parent is a single person:
@@ -62,3 +67,4 @@ matching those compounds whatever drift they introduced.
 - `Hike Cancellation - Weather & Low Signups.md` - calling off a day-trip the morning of, owning unclear earlier communication.
 - `Year Start - Regrouping & Comms Apology.md` - WhatsApp, whole group. Owning two weeks of thin comms while announcing a družina reshuffle that isn't decided yet.
 - `Enrollment - Holding Reply After Late Response.md` - email, one parent. Breaking silence with a prospective family before you know whether you have a slot, plus the variant for inquiries answered on time.
+- `Enrollment - Informal No-Slot Reply.md` - email, one parent who is a scout, tykanie. Telling a family there is no free slot after a long silence. Written by him, so it is also a voice reference for informal mail.

@@ -80,5 +80,8 @@ A holding reply to parents whose enrollment inquiry had gone unanswered. The edi
 - **The buried actionable block.** Original 1 puts "Čo môžete očakávať" at the very bottom,
   under two paragraphs of apology, where WhatsApp collapses it behind "Read more".
 
+**Exception - informal mail.** In a tykanie email, colloquial forms such as `keby sa otvorí`
+and `môžme` are his voice and stay. See `Enrollment - Informal No-Slot Reply.md`.
+
 The distinction matters: an edit that removes the artifacts and keeps the habits still sounds
 like him. One that tidies the habits produces generic prose he will not recognize.
