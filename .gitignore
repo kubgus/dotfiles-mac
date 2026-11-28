@@ -3,6 +3,7 @@ config/*
 !config/gtk-3.0
 !config/nvim
 !config/opencode
+!config/rex
 
 /tmp
 
