@@ -1,8 +1,8 @@
 #!/bin/bash
 # Claude Code: the status line. Everything personal - the operator context
-# (claude/operator.md) and the kubgus plugin with its house style, skills,
-# notification sounds and MCP servers - is opt-in per session through kubgus
-# mode in bin/claudeswitch, so nothing here links it into ~/.claude.
+# (claude/operator.md) and the kubgus plugin with its house style, skills and
+# MCP servers - is opt-in per session through kubgus mode in bin/claudeswitch,
+# so nothing here links it into ~/.claude.
 #
 # settings.json is deliberately absent. See the README: Claude Code owns that
 # file and rewrites it in place, so tracking it was a fight rather than a sync.

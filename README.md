@@ -32,7 +32,8 @@ whenever; it repairs a missing or misdirected symlink rather than complaining.
 | `bin/` | Commands, linked into `~/Bin` (already on `PATH`). |
 | `config/` | Linked wholesale to `~/.config`. |
 | `claude/` | Claude Code: the operator context (`operator.md`) and the status line. |
-| `claude/kubgus/` | The `kubgus` plugin - output style, skills, hooks, MCP servers. |
+| `claude/kubgus/` | The `kubgus` plugin - output style, skills, MCP servers. |
+| `.archive/` | Retired files at their old paths. Tracked, never loaded. |
 | `pi/` | Pi agent config. |
 | `zprofile` | Linked to `~/.zprofile`. |
 
@@ -110,15 +111,12 @@ session and pushed back after, with `oauthAccount` and the org-scoped caches
 left where they are. Two accounts running at once means last writer wins, which
 is already true of that file between concurrent sessions of one account.
 
-**The notification sounds have an off switch outside the repo.** Two hooks
-chime: `Submarine` when a permission prompt is waiting, `Glass` when a turn
-ends. They sit in different frequency registers so they stay apart over music.
-`touch ~/.claude/mute` silences both; delete the file to bring them back. It is
-deliberately untracked - per-machine, per-mood state rather than configuration.
-They are plugin hooks now rather than `settings.json` hooks, so they play only
-in kubgus mode. Plugin hooks and settings hooks both fire for
-the same event, which is why the settings copies had to go: two definitions
-meant every sound played twice.
+**`.archive/` keeps retired config, tracked but loaded by nothing.** Each file
+sits at its old path under `.archive/`, so restoring it is one `git mv` back.
+It holds the kubgus plugin's notification hooks: a `Stop` and a
+`PermissionRequest` hook that played a system sound and rang the terminal bell.
+They are retired, not deleted, because the tty resolution in `notify.sh` took
+work to get right and is worth having if a bell ever comes back.
 
 **Everything personal is chosen per session.** A `claudeswitch` session starts
 in kubgus mode: `operator.md`, the `kubgus` plugin and the claude.ai connectors.
@@ -181,8 +179,7 @@ Shell scripts here should be `shellcheck`-clean, and start with
 `set -euo pipefail` unless there is a reason not to. Check them with:
 
 ```bash
-shellcheck -x _setup.sh _setup/*.sh claude/*.sh \
-    claude/kubgus/hooks-handlers/*.sh $(grep -l '^#!/bin/' bin/*)
+shellcheck -x _setup.sh _setup/*.sh claude/*.sh $(grep -l '^#!/bin/' bin/*)
 ```
 
 `bin/claudeswitch` is Python rather than shell - it needs JSON, HTTPS, Unicode
