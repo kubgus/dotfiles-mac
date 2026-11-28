@@ -68,3 +68,4 @@ matching those compounds whatever drift they introduced.
 - `Year Start - Regrouping & Comms Apology.md` - WhatsApp, whole group. Owning two weeks of thin comms while announcing a družina reshuffle that isn't decided yet.
 - `Enrollment - Holding Reply After Late Response.md` - email, one parent. Breaking silence with a prospective family before you know whether you have a slot, plus the variant for inquiries answered on time.
 - `Enrollment - Informal No-Slot Reply.md` - email, one parent who is a scout, tykanie. Telling a family there is no free slot after a long silence. Written by him, so it is also a voice reference for informal mail.
+- `Enrollment - Formal No-Slot Reply.md` - email, one parent, vykanie. A short no-slot answer to a first inquiry, with the child placed on the waiting list.
