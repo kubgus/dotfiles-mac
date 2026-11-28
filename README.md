@@ -54,6 +54,13 @@ used by a single domain belongs in that domain's script rather than here.
 directories worth keeping. `~/.config` is one symlink to the whole directory,
 so anything not whitelisted still works locally, it just isn't tracked.
 
+**Rex themes are imported, not linked.** Rex has no theme setting in `init.lua`;
+it copies an imported theme into its own app data. `config/rex/themes/` keeps the
+source files in Ghostty format, so a new machine can import them again - through
+Settings > Theme > Import, or `rex do client.theme.import path=<file>` once Remote
+Control is on. `nightfly` is the upstream extra from `bluz71/vim-nightfly-colors`,
+unchanged, so the terminal matches the Neovim colorscheme.
+
 **`~/.claude` and `~/.pi/agent` are linked file by file.** Both are mostly
 session state, telemetry and caches. Only the portable files are tracked;
 `auth.json`, `sessions/` and `npm/` stay machine-local.
